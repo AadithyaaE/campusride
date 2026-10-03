@@ -8,6 +8,8 @@ import type {
   BusOptionOut,
   BusOptionsOut,
   CommuteDecisionOut,
+  RecoveryOptionOut,
+  RecoveryOut,
   BoardingScanOut,
   MyBoardingOut,
   OccupancyOut,
@@ -236,6 +238,8 @@ export function live(
     available_seats: 30,
     occupancy_percentage: 40,
     boarded_count: 0,
+    route_status: "NORMAL",
+    deviation_distance_m: 6.2,
     last_updated: "2030-01-07T01:50:00Z",
     stale: false,
     ...overrides,
@@ -289,6 +293,7 @@ export const simStatus: SimStatusOut = {
   buses: 3,
   telemetry_interval_s: 5,
   controls_allowed: true,
+  route_deviation: {},
 };
 
 /**
@@ -334,6 +339,8 @@ export function stopBus(
     occupancy_percentage: Math.round((100 * occupancy) / bus.capacity),
     last_updated: l.last_updated,
     stale: false,
+    route_status: l.route_status,
+    deviation_distance_m: l.deviation_distance_m,
     position: {
       current_stop: current,
       previous_stop: current.seq > 0 ? ref(dir.stops[current.seq - 1]!.stop_id) : null,
@@ -658,3 +665,81 @@ export function scanResult(over: Partial<BoardingScanOut> = {}): BoardingScanOut
     ...over,
   };
 }
+
+/** A FAKE backend recovery option (as `GET /students/me/recovery-options` returns it). */
+export function recoveryOption(
+  busId: string,
+  over: Partial<RecoveryOptionOut> = {},
+): RecoveryOptionOut {
+  const minutes = over.eta_minutes ?? 9;
+  const prediction = eta(minutes);
+  return {
+    bus_id: busId,
+    bus_number: busId,
+    trip_id: `T-TEST-${busId}`,
+    route_id: "T1",
+    route_direction_id: "T1",
+    route_name: "Test Line One",
+    direction: "to_campus",
+    boarding_stop_id: "X2",
+    boarding_stop_name: "Test Stop B",
+    eta_minutes: minutes,
+    estimated_arrival_time: prediction.estimated_arrival_time,
+    eta: prediction,
+    occupancy: 24,
+    capacity: 50,
+    available_seats: 26,
+    occupancy_percentage: 48,
+    status: "on_time",
+    bus_status: "en_route",
+    delay_minutes: 0,
+    distance_to_stop_m: 1200,
+    stops_away: 2,
+    catchable: true,
+    safety_buffer_minutes: 5,
+    walking_time_minutes: 4,
+    reason: `Bus ${busId} serves your stop and gives you a 5-minute safety buffer.`,
+    ...over,
+  };
+}
+
+/** Fake recovery: my BX7 is at risk; the backend recommends BX8, then BX9. */
+export function recovery(over: Partial<RecoveryOut> = {}): RecoveryOut {
+  return {
+    student_id: me.id,
+    status: "recovery_available",
+    trigger: "likely_to_miss",
+    commute_decision: "RISK",
+    assigned_bus_id: "BX7",
+    assigned_bus: "BUS BX7",
+    assigned_bus_delay_minutes: 0,
+    boarding_stop_id: "X2",
+    boarding_stop_name: "Test Stop B",
+    route_direction_id: "T2",
+    required_buffer_minutes: 2,
+    recommended: recoveryOption("BX8"),
+    alternatives: [
+      recoveryOption("BX9", {
+        eta_minutes: 14,
+        occupancy: 10,
+        available_seats: 40,
+        occupancy_percentage: 20,
+        safety_buffer_minutes: 10,
+        reason:
+          "Bus BX9 is less crowded and still gives you enough time to reach the stop (10 min to spare).",
+      }),
+    ],
+    excluded: [],
+    computed_at: COMPUTED_AT,
+    ...over,
+  };
+}
+
+/** The usual case: assigned bus comfortably catchable → nothing to show. */
+export const recoveryNotNeeded: RecoveryOut = recovery({
+  status: "not_needed",
+  trigger: null,
+  commute_decision: "YES",
+  recommended: null,
+  alternatives: [],
+});

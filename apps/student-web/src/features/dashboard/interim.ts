@@ -9,7 +9,8 @@
  *   `estimated_arrival_time`, traffic, confidence) — `GET /students/me/arrivals`,
  *   and the multi-bus comparison (crowding, FASTEST / LEAST_CROWDED / ASSIGNED /
  *   BEST_ALTERNATIVE) — `GET /students/me/bus-options`, and "Will I make my bus?"
- *   (YES / RISK / MISSED) — `GET /students/me/commute-decision`.
+ *   (YES / RISK / MISSED) — `GET /students/me/commute-decision`, and missed-bus
+ *   recovery — `GET /students/me/recovery-options`.
  *
  * INTERIM (this file):
  *   • alerts = simple rules over backend data → Phase 6 alerts
@@ -18,11 +19,11 @@
  */
 import type {
   ArrivalOut,
-  BusOptionsOut,
   BusOut,
   BusStatus,
   CommuteDecisionOut,
   MyArrivalsOut,
+  RecoveryOut,
   StopBusOut,
   StopProximity,
 } from "../../api/types";
@@ -68,7 +69,7 @@ export const otherArrivals = (a: MyArrivalsOut | null): ArrivalOut[] =>
 export function dashboardAlerts(
   a: MyArrivalsOut | null,
   commute: CommuteDecisionOut | null,
-  options: BusOptionsOut | null,
+  recovery: RecoveryOut | null,
   allBuses: BusOut[],
 ): DashboardAlert[] {
   const out: DashboardAlert[] = [];
@@ -119,28 +120,28 @@ export function dashboardAlerts(
     }
   }
   for (const b of allBuses) {
-    if (b.live?.status === "deviated") {
+    if (b.live?.route_status === "MAJOR_DEVIATION") {
       out.push({
         id: `deviation-${b.id}`,
         kind: "deviation",
         severity: "warning",
-        title: `Bus ${b.id} is off its usual route`,
-        body: `${b.live.route_direction_id ?? b.route_id}.`,
+        title: `Bus ${b.id} is off its planned route`,
+        body:
+          b.live.deviation_distance_m === null
+            ? `${b.live.route_direction_id ?? b.route_id}.`
+            : `Currently ${Math.round(b.live.deviation_distance_m)} m from its planned route.`,
       });
     }
   }
-  // The alternative itself is chosen by the BACKEND comparison (BEST_ALTERNATIVE).
-  const best = options?.options.find(
-    (o) => o.indicators.includes("BEST_ALTERNATIVE") && !o.is_assigned_bus,
-  );
-  // Information only — the decision stays about the ASSIGNED bus (recovery is Feature 8).
+  // The suggestion comes from the BACKEND recovery service (Feature 9) — never a reassignment.
+  const best = recovery?.status === "recovery_available" ? recovery.recommended : null;
   if ((commute?.decision === "RISK" || commute?.decision === "MISSED") && best) {
     out.push({
       id: `alternative-${best.bus_id}`,
       kind: "alternative",
       severity: "info",
       title: `Alternative: Bus ${best.bus_number} (${best.route_direction_id})`,
-      body: `Also serves ${stopName}, about ${best.eta.eta_minutes} min away, ${best.crowding.toLowerCase()} crowding. Your assigned bus stays ${a.assigned_bus_id}.`,
+      body: `${best.reason} Your assigned bus stays ${a.assigned_bus_id}.`,
     });
   }
   return out;

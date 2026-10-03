@@ -331,12 +331,77 @@ describe("Dashboard — live state from the backend", () => {
     expect(backend.calls.filter((c) => c.includes("commute-decision?"))).toEqual([]); // no bus/stop params
   });
 
+  it("shows the BACKEND recovery card only when needed, and follows it on every poll", async () => {
+    let n = 0;
+    const { backend } = signedInApp({
+      "GET /api/v1/students/me/recovery-options": () => {
+        n += 1;
+        if (n === 1) return json(fx.recoveryNotNeeded); // assigned bus comfortably catchable
+        if (n === 2) return json(fx.recovery()); // → at risk: BX8 recommended, BX9 also
+        // → BX8 filled up: the backend drops it and recommends BX9
+        return json(
+          fx.recovery({
+            recommended: fx.recoveryOption("BX9", { eta_minutes: 14 }),
+            alternatives: [],
+            excluded: [{ bus_id: "BX8", reason: "full" }],
+          }),
+        );
+      },
+    });
+    await screen.findByRole("region", { name: "My bus live" });
+    expect(screen.queryByRole("region", { name: "Missed-bus recovery" })).not.toBeInTheDocument();
+    await pollOnce();
+    await flush();
+    const card = screen.getByRole("region", { name: "Missed-bus recovery" });
+    expect(card).toHaveTextContent("Try BUS BX8 instead");
+    // the other dashboard sections stay visible
+    expect(screen.getByRole("region", { name: "My bus live" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Will I make my bus?" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bus options" })).toBeInTheDocument();
+    await pollOnce();
+    await flush();
+    const after = screen.getByRole("region", { name: "Missed-bus recovery" });
+    expect(after).toHaveTextContent("Try BUS BX9 instead");
+    expect(after).not.toHaveTextContent("BX8");
+    expect(backend.calls).toContain("GET /api/v1/students/me/recovery-options");
+    expect(backend.calls.filter((c) => c.includes("recovery-options?"))).toEqual([]); // no overrides
+  });
+
+  it("shows a backend MAJOR deviation on my bus without hiding commute, recovery or occupancy", async () => {
+    signedInApp({
+      "GET /api/v1/students/me/arrivals": () =>
+        json({
+          ...fx.myArrivals,
+          my_bus: fx.arrival(
+            "BX7",
+            { distance_to_stop_m: 3200, stop_offset_m: 3200, stops_away: 1 },
+            fx.eta(7),
+            { status: "deviated", route_status: "MAJOR_DEVIATION", deviation_distance_m: 312.4 },
+          ),
+        }),
+      "GET /api/v1/students/me/recovery-options": () => json(fx.recovery()),
+    });
+    const mine = await screen.findByRole("region", { name: "My bus live" });
+    expect(mine).toHaveTextContent("Major deviation · 312 m off route");
+    expect(within(mine).getByRole("alert")).toHaveTextContent(
+      "Your bus is currently 312 m from its planned route.",
+    );
+    expect(within(mine).getByLabelText("Live occupancy")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Will I make my bus?" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Missed-bus recovery" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bus options" })).toBeInTheDocument();
+  });
+
   it("shows no bus options to an unassigned student", async () => {
     signedInApp({
       "GET /api/v1/students/me/assignment": () => json(fx.unassigned),
       "GET /api/v1/students/me/arrivals": () => json(fx.myArrivalsUnassigned),
       "GET /api/v1/students/me/bus-options": () => json(fx.myBusOptionsUnassigned),
       "GET /api/v1/students/me/commute-decision": () => json(fx.myCommuteUnassigned),
+      "GET /api/v1/students/me/recovery-options": () =>
+        json(
+          fx.recovery({ status: "unassigned", trigger: null, recommended: null, alternatives: [] }),
+        ),
     });
     await screen.findByText("Your bus assignment is not available yet.");
     expect(screen.queryByRole("region", { name: "Bus options" })).not.toBeInTheDocument();

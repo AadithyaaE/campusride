@@ -5,7 +5,8 @@
  *   (`GET /students/me/assignment`), live bus state (`GET /buses`), stop matching
  *   and ETAs (`GET /students/me/arrivals`), the multi-bus comparison
  *   (`GET /students/me/bus-options`) — polled, see data/liveFleet.ts.
- *   and "Will I make my bus?" (`GET /students/me/commute-decision`).
+ *   "Will I make my bus?" (`GET /students/me/commute-decision`) and missed-bus
+ *   recovery (`GET /students/me/recovery-options`, suggestions only).
  * INTERIM (interim.ts): alerts —
  *   labelled as estimates until Phases 4/6 provide them from the backend.
  */
@@ -24,6 +25,7 @@ import { DemoControls } from "./DemoControls";
 import type { DashboardAlert } from "./interim";
 import { DecisionCard, MyBusLiveCard } from "./LiveCards";
 import { QuickActions } from "./QuickActions";
+import { RecoveryCard } from "./RecoveryCard";
 
 type Loadable<T> = AsyncState<T> & { reload: () => void };
 
@@ -100,6 +102,17 @@ export function DashboardPanel(props: Props) {
         <Loading label="Loading live bus data…" />
       ) : (
         <>
+          {fleet.recovery && (
+            <RecoveryCard
+              recovery={fleet.recovery}
+              simRef={simRef}
+              onViewOptions={() =>
+                document
+                  .getElementById("bus-options")
+                  ?.scrollIntoView?.({ behavior: "smooth", block: "start" })
+              }
+            />
+          )}
           <MyBusLiveCard
             assignment={a}
             bus={arrivals?.my_bus ?? null}

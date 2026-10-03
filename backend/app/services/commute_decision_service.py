@@ -47,7 +47,7 @@ from app.geo import walking_distance_m
 from app.models.common import BusStatus
 from app.repositories import Repositories
 from app.services.assignments import ResolvedAssignment
-from app.services.bus_comparison_service import BusComparisonService
+from app.services.bus_comparison_service import BusComparisonService, StudentBusOptions
 from app.services.eta_service import EtaPrediction
 from app.services.matching import ServingBus
 from app.services.student_location import StudentLocation, StudentLocationSource
@@ -209,6 +209,11 @@ class StudentCommute:
     result: CommuteDecision
     alternatives_available: int
     """Other buses (Feature 6 options) serving the stop — shown, never switched to."""
+    options: StudentBusOptions
+    """The Feature 6 comparison this decision was built from (reused by recovery, Feature 9)."""
+    walking_distance_m: float | None
+    """Feature 7 walk to the boarding stop (None without a location) — reused by recovery."""
+    walking_speed_mps: float
 
 
 class CommuteDecisionService:
@@ -270,4 +275,7 @@ class CommuteDecisionService:
             location=location,
             result=result,
             alternatives_available=alternatives,
+            options=options,
+            walking_distance_m=distance,
+            walking_speed_mps=speed,
         )

@@ -9,10 +9,11 @@ from pydantic import BaseModel
 
 from app.core.clock import Clock
 from app.models import GeoPoint, Stop
-from app.models.common import BusStatus, Direction, StopProximity
+from app.models.common import BusStatus, Direction, RouteStatus, StopProximity
 from app.models.route import RouteStop
 from app.services.capacity import available_seats, occupancy_percentage_display
 from app.services.matching import ServingBus
+from app.services.route_anomaly_service import live_route_status
 from app.services.tracking import is_delayed
 
 
@@ -71,6 +72,9 @@ class StopBusOut(BaseModel):
     """Backend-computed (``services/capacity.py``); null when capacity is unknown."""
     last_updated: datetime
     stale: bool
+    route_status: RouteStatus | None
+    """Feature 10 route status of this bus (backend-evaluated)."""
+    deviation_distance_m: float | None
     position: BusPositionOut
     match: StopMatchOut | None
     """Null only for a student's assigned bus that is not currently serving their stop."""
@@ -118,6 +122,8 @@ class StopBusOut(BaseModel):
             occupancy_percentage=occupancy_percentage_display(s.occupancy, sb.bus.capacity),
             last_updated=s.ts,
             stale=(clock.now() - s.last_seen).total_seconds() > stale_after_s,
+            route_status=live_route_status(s, now=clock.now(), stale_after_s=stale_after_s),
+            deviation_distance_m=s.deviation_m,
             position=BusPositionOut(
                 current_stop=current,
                 previous_stop=ref(p.previous),

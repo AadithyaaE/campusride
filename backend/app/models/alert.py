@@ -25,3 +25,5 @@ class Alert(Document):
     payload: dict[str, Any] = Field(default_factory=dict)
     created_at: AwareDatetime
     acked_by: list[str] = Field(default_factory=list)
+    resolved_at: AwareDatetime | None = None
+    """When the observed condition ended (e.g. the bus returned to its route)."""

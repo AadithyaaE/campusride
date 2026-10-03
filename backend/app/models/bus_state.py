@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import AwareDatetime, Field
 
-from app.models.common import BusStatus, Direction, Document, GeoPoint
+from app.models.common import BusStatus, Direction, Document, GeoPoint, RouteStatus
 
 
 class BusState(Document):
@@ -40,6 +40,10 @@ class BusState(Document):
     boarded_count: int = Field(default=0, ge=0)
     """QR boarding events recorded for the current trip (counted, never incremented)."""
     status: BusStatus = BusStatus.SCHEDULED
+    route_status: RouteStatus | None = None
+    """Feature 10: position vs. the planned route at this fix (set by the ingest service)."""
+    deviation_m: float | None = None
+    """Shortest distance from ``location`` to the planned route geometry (m)."""
     stale: bool = False
     """True when no telemetry has arrived for BUS_STALE_AFTER_S (e.g. GPS dropout)."""
     last_stop_departures: dict[str, AwareDatetime] = Field(default_factory=dict)

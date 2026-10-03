@@ -63,14 +63,26 @@ class Settings(BaseSettings):
     stop_arrival_radius_m: float = 40.0
     stop_approaching_m: float = 1_000.0
     bus_stale_after_s: float = 45.0
-    deviation_threshold_m: float = 150.0
-    deviation_consecutive_pings: int = 3
+
+    # --- route deviation (Feature 10). Above synthetic GPS noise (σ 8 m/axis → < ~35 m). ---
+    route_minor_deviation_m: float = 50.0
+    """> this far from the planned route → MINOR_DEVIATION."""
+    route_major_deviation_m: float = 150.0
+    """≥ this far from the planned route → MAJOR_DEVIATION (alert)."""
+    sim_deviation_minor_offset_m: float = 100.0
+    """Demo: perpendicular offset applied to simulated GPS in ``minor`` mode."""
+    sim_deviation_major_offset_m: float = 300.0
+    """Demo: perpendicular offset applied to simulated GPS in ``major`` mode."""
 
     # --- commute decision (Feature 7, prototype values — not statistically calibrated) ---
     walking_speed_mps: float = 1.4
     """Fallback walking speed when a student has no profile speed (seeded profiles carry one)."""
     commute_safety_buffer_s: float = 120.0
     """Arrive at least this long before the bus (road crossing, finding the boarding point)."""
+    recovery_delay_threshold_s: float = 300.0
+    """Feature 9: an assigned bus this late (s behind the timetable) triggers recovery options."""
+    recovery_max_alternatives: int = 3
+    """Feature 9: other recovery options listed after the recommended one."""
     student_location_mode: Literal["synthetic", "off"] = "synthetic"
     """``synthetic``: deterministic demo location near the boarding stop (no real GPS yet);
     ``off``: no location source → LOCATION_UNAVAILABLE."""
@@ -108,6 +120,8 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_MODE=firebase requires FIREBASE_PROJECT_ID")
         if self.app_env == "prod" and self.auth_mode == "mock":
             raise ValueError("AUTH_MODE=mock is not allowed when APP_ENV=prod")
+        if not 0 < self.route_minor_deviation_m < self.route_major_deviation_m:
+            raise ValueError("need 0 < ROUTE_MINOR_DEVIATION_M < ROUTE_MAJOR_DEVIATION_M")
         return self
 
     @property

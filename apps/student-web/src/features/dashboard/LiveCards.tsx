@@ -5,6 +5,7 @@ import type {
   CommuteDecision,
   CommuteDecisionOut,
   EtaPredictionOut,
+  RouteStatus,
   StopBusOut,
   StopProximity,
 } from "../../api/types";
@@ -75,6 +76,39 @@ export function OccupancyBar({
 }
 
 const CONFIDENCE_LABEL = { high: "High", medium: "Medium", low: "Low" } as const;
+
+/**
+ * Route status (Feature 10) exactly as the backend evaluated it — never computed here.
+ * States the observed condition only.
+ */
+export function RouteStatusText({
+  status,
+  distance,
+}: {
+  status: RouteStatus | null;
+  distance: number | null;
+}) {
+  const m = distance === null ? null : Math.round(distance);
+  if (status === "NORMAL") return <span className="route-ok">On planned route</span>;
+  if (status === "MINOR_DEVIATION") {
+    return (
+      <span className="route-minor">Minor deviation{m !== null && ` · ${m} m off route`}</span>
+    );
+  }
+  if (status === "MAJOR_DEVIATION") {
+    return (
+      <span className="route-major">
+        Major deviation{m !== null && ` · ${m} m off route`}
+        {m !== null && (
+          <span className="route-alert" role="alert">
+            Your bus is currently {m} m from its planned route.
+          </span>
+        )}
+      </span>
+    );
+  }
+  return <span className="muted">Route status unavailable</span>;
+}
 
 /**
  * BACKEND ETA as a ticking countdown (whole minutes only). The value comes from
@@ -196,6 +230,12 @@ export function MyBusLiveCard({
             <div>
               <dt>Next stop</dt>
               <dd className="metric-text">{bus.position.next_stop?.name ?? "—"}</dd>
+            </div>
+            <div className="metric-wide">
+              <dt>Route</dt>
+              <dd>
+                <RouteStatusText status={bus.route_status} distance={bus.deviation_distance_m} />
+              </dd>
             </div>
             <div className="metric-wide">
               <dt>Occupancy</dt>

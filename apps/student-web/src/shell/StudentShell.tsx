@@ -55,9 +55,9 @@ export function StudentShell({ me, onLogout }: Props) {
     }
     return {
       atMyStop: otherArrivals(arrivals), // backend ETA order
-      alerts: dashboardAlerts(arrivals, fleet.commute, fleet.options, fleet.buses ?? []),
+      alerts: dashboardAlerts(arrivals, fleet.commute, fleet.recovery, fleet.buses ?? []),
     };
-  }, [fleet.arrivals, fleet.commute, fleet.options, fleet.buses]);
+  }, [fleet.arrivals, fleet.commute, fleet.recovery, fleet.buses]);
 
   const paused = fleet.sim?.paused ?? false;
   // Map markers: backend coordinates; highlight my bus and buses the BACKEND says serve my stop.

@@ -16,11 +16,13 @@ from app.models.api.commute import CommuteDecisionOut, StudentLocationOut
 from app.models.api.comparison import BusOptionOut, BusOptionsOut, ExcludedBusOut
 from app.models.api.eta import ArrivalOut, EtaPredictionOut, MyArrivalsOut
 from app.models.api.matching import MyStopBusesOut, StopBusOut, StopSummaryOut
+from app.models.api.recovery import ExcludedRecoveryBusOut, RecoveryOptionOut, RecoveryOut
 from app.models.api.students import AssignmentOut, MyAssignmentOut
 from app.models.common import Role
 from app.services.assignments import AssignmentService
 from app.services.bus_comparison_service import BusOption, StudentBusOptions
 from app.services.commute_decision_service import StudentCommute
+from app.services.missed_bus_service import StudentRecovery
 
 router = APIRouter(tags=["students"])
 
@@ -348,3 +350,64 @@ async def my_boarding(principal: Student, c: Container) -> MyBoardingOut:
         boarded=BoardingEventOut.of(sb.boarded) if sb.boarded else None,
         occupancy=OccupancyOut.of(sb.occupancy),
     )
+
+
+# --------------------------------------------------------------------------- Feature 9
+
+
+def _recovery_out(c: Container, student_id: str, sr: StudentRecovery | None) -> RecoveryOut:
+    buffer_min = round(c.settings.commute_safety_buffer_s / 60)
+    if sr is None:
+        return RecoveryOut(
+            student_id=student_id,
+            status="unassigned",
+            trigger=None,
+            commute_decision=None,
+            assigned_bus_id=None,
+            assigned_bus=None,
+            assigned_bus_delay_minutes=None,
+            boarding_stop_id=None,
+            boarding_stop_name=None,
+            route_direction_id=None,
+            required_buffer_minutes=buffer_min,
+            recommended=None,
+            alternatives=[],
+            excluded=[],
+            computed_at=c.clock.now(),
+        )
+    a, r = sr.commute.assignment, sr.recovery
+    stop_id, stop_name = a.boarding_stop.id, a.boarding_stop.name
+    mine = sr.commute.my_bus
+    return RecoveryOut(
+        student_id=student_id,
+        status=r.status,
+        trigger=r.trigger,
+        commute_decision=sr.commute.result.decision,
+        assigned_bus_id=a.bus.id,
+        assigned_bus=f"BUS {a.bus.id}",
+        assigned_bus_delay_minutes=None if mine is None else round(mine.state.delay_s / 60),
+        boarding_stop_id=stop_id,
+        boarding_stop_name=stop_name,
+        route_direction_id=a.direction.variant_id,
+        required_buffer_minutes=buffer_min,
+        recommended=RecoveryOptionOut.of(r.recommended, stop_id, stop_name) if r.recommended else None,
+        alternatives=[RecoveryOptionOut.of(o, stop_id, stop_name) for o in r.alternatives],
+        excluded=[ExcludedRecoveryBusOut(bus_id=x.bus_id, reason=x.reason) for x in r.excluded],
+        computed_at=sr.computed_at,
+    )
+
+
+@router.get("/students/me/recovery-options", response_model=RecoveryOut)
+async def my_recovery_options(principal: Student, c: Container) -> RecoveryOut:
+    """Missed-bus recovery at the student's ASSIGNED stop (suggestions only — never a reassignment).
+
+    Derived entirely from the assignment; query parameters cannot change the student, stop or bus.
+    """
+    return _recovery_out(c, principal.user_id, await c.recovery().for_student(principal.user_id))
+
+
+@router.get("/students/{student_id}/recovery-options", response_model=RecoveryOut)
+async def student_recovery_options(student_id: str, principal: CurrentPrincipal, c: Container) -> RecoveryOut:
+    """Same recovery options for a given student: the student themself, or an admin."""
+    await _authorize_student_view(principal, c, student_id)
+    return _recovery_out(c, student_id, await c.recovery().for_student(student_id))

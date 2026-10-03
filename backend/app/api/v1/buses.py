@@ -18,8 +18,10 @@ from app.deps import Container, CurrentPrincipal
 from app.models import Bus, BusState, GeoPoint
 from app.models.api.boarding import OccupancyOut
 from app.models.api.eta import BusEtaOut, EtaPredictionOut
-from app.models.common import BusSource, BusStatus, Direction, FleetStatus
+from app.models.api.route_status import RouteStatusOut
+from app.models.common import BusSource, BusStatus, Direction, FleetStatus, RouteStatus
 from app.services.capacity import available_seats, occupancy_percentage_display
+from app.services.route_anomaly_service import bus_route_status, live_route_status
 from app.services.tracking import is_delayed
 
 router = APIRouter(tags=["buses"])
@@ -46,6 +48,9 @@ class BusLiveOut(BaseModel):
     occupancy_percentage: int | None
     boarded_count: int
     """QR boardings on the current trip (included in ``occupancy``)."""
+    route_status: RouteStatus | None
+    """Feature 10: NORMAL / MINOR_DEVIATION / MAJOR_DEVIATION (or STALE…), from the backend."""
+    deviation_distance_m: float | None
     last_updated: datetime
     stale: bool
 
@@ -72,6 +77,8 @@ class BusLiveOut(BaseModel):
                 None if capacity is None else occupancy_percentage_display(s.occupancy, capacity)
             ),
             boarded_count=s.boarded_count,
+            route_status=live_route_status(s, now=clock.now(), stale_after_s=stale_after_s),
+            deviation_distance_m=s.deviation_m,
             last_updated=s.ts,
             stale=(clock.now() - s.last_seen).total_seconds() > stale_after_s,
         )
@@ -179,3 +186,16 @@ async def bus_eta(
 async def bus_occupancy(bus_id: str, _: CurrentPrincipal, c: Container) -> OccupancyOut:
     """Live occupancy = min(capacity, synthetic baseline + QR boardings on the current trip)."""
     return OccupancyOut.of(await c.boarding().occupancy(bus_id))
+
+
+@router.get("/buses/{bus_id}/route-status", response_model=RouteStatusOut)
+async def route_status(bus_id: str, _: CurrentPrincipal, c: Container) -> RouteStatusOut:
+    """Distance from the TRACKED position to the PLANNED route geometry, and its status.
+
+    The route remains the planned route; demo deviation changes the synthetic bus position.
+    """
+    r = await bus_route_status(c.route_anomaly(), bus_id)
+    if r is None:
+        raise NotFoundError(f"bus {bus_id} not found")
+    s = c.settings
+    return RouteStatusOut.of(r, minor_m=s.route_minor_deviation_m, major_m=s.route_major_deviation_m)

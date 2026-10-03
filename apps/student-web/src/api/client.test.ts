@@ -248,6 +248,23 @@ describe("ApiClient", () => {
     expect(mine.my_bus?.bus_id).toBe("BX7");
   });
 
+  it("validates missed-bus recovery responses (Feature 9)", async () => {
+    const ok = await makeClient(async () => json(fx.recovery())).myRecoveryOptions();
+    expect(ok.recommended?.bus_id).toBe("BX8");
+    expect(
+      (await makeClient(async () => json(fx.recoveryNotNeeded)).myRecoveryOptions()).status,
+    ).toBe("not_needed");
+    for (const bad of [
+      fx.recovery({ recommended: null }), // "available" but nothing recommended
+      fx.recovery({ status: "not_needed", trigger: null }), // options without a reason
+      fx.recovery({ recommended: fx.recoveryOption("BX8", { available_seats: 2.5 }) }),
+    ]) {
+      await expect(makeClient(async () => json(bad)).myRecoveryOptions()).rejects.toBeInstanceOf(
+        MalformedResponseError,
+      );
+    }
+  });
+
   it("validates QR boarding and occupancy responses (Feature 8)", async () => {
     const backend = fakeBackend({
       "POST /api/v1/boarding/scan": () => json(fx.scanResult()),

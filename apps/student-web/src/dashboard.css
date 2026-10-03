@@ -967,3 +967,107 @@
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
 }
+
+/* ------------------------------------------------ missed-bus recovery (F9) */
+
+.recovery {
+  border-width: 2px;
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fff7ed, var(--surface) 75%);
+}
+.recovery-missed {
+  border-color: #fca5a5;
+  background: linear-gradient(180deg, #fef2f2, var(--surface) 75%);
+}
+.recovery-headline {
+  margin: 6px 0 2px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #9a3412;
+}
+.recovery-missed .recovery-headline {
+  color: #991b1b;
+}
+.recovery-delay {
+  font-size: 1rem;
+}
+.recovery-try {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+.recovery-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0 0 10px;
+}
+.recovery-facts dt {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.recovery-facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+.recovery-facts .sub {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.recovery-reason {
+  margin: 0 0 10px;
+  font-style: italic;
+}
+.recovery-more ul {
+  list-style: none;
+  margin: 4px 0 10px;
+  padding: 0;
+}
+.recovery-more li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.recovery-none {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+@media (max-width: 420px) {
+  .recovery-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ------------------------------------------------- route deviation (F10) */
+
+.route-ok {
+  color: #15803d;
+  font-weight: 700;
+}
+.route-minor {
+  color: #b45309;
+  font-weight: 700;
+}
+.route-major {
+  color: #b91c1c;
+  font-weight: 800;
+}
+.route-alert {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-weight: 600;
+  font-size: 0.85rem;
+}

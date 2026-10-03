@@ -53,6 +53,13 @@ export type BoardingEventOut = Schemas["BoardingEventOut"];
 export type OccupancyOut = Schemas["OccupancyOut"];
 export type TripBoardingOut = Schemas["TripBoardingOut"];
 export type MyBoardingOut = Schemas["MyBoardingOut"];
+// ---- missed-bus recovery (Feature 9) — suggestions only, never a reassignment
+export type RecoveryOut = Schemas["RecoveryOut"];
+export type RecoveryOptionOut = Schemas["RecoveryOptionOut"];
+// ---- route deviation (Feature 10) — evaluated by the backend, displayed as given
+export type RouteStatus = Schemas["RouteStatus"];
+export type RouteStatusResponse = Schemas["RouteStatusOut"];
+export type RouteDeviationDemoMode = Schemas["RouteDeviationIn"]["mode"];
 /** Backend commute decision (Feature 7); YES / RISK / MISSED are the decisions. */
 export type CommuteDecision = NonNullable<CommuteDecisionOut["decision"]>;
 /** Backend comparison indicator (Feature 6). */

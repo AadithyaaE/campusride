@@ -18,6 +18,9 @@ import type {
   MyBoardingOut,
   OccupancyOut,
   TripBoardingOut,
+  RecoveryOptionOut,
+  RecoveryOut,
+  RouteStatusResponse,
   EtaPredictionOut,
   MyArrivalsOut,
   StopArrivalsOut,
@@ -340,3 +343,57 @@ export const isMyBoarding: Guard<MyBoardingOut> = (v): v is MyBoardingOut =>
   (v.occupancy === null || isOccupancy(v.occupancy)) &&
   ((v.status === "assigned" && isStr(v.bus_id) && isObj(v.boarding_stop)) ||
     (v.status === "unassigned" && v.bus_id === null && v.trip_id === null));
+
+const RECOVERY_STATUSES = ["recovery_available", "not_needed", "no_alternative", "unassigned"];
+const TRIGGERS = ["missed", "likely_to_miss", "significantly_delayed"];
+
+export const isRecoveryOption: Guard<RecoveryOptionOut> = (v): v is RecoveryOptionOut =>
+  isObj(v) &&
+  isStr(v.bus_id) &&
+  isStr(v.boarding_stop_id) &&
+  isIntOrNull(v.eta_minutes) &&
+  isEta(v.eta) &&
+  isInt(v.occupancy) &&
+  isInt(v.capacity) &&
+  isInt(v.available_seats) &&
+  isIntOrNull(v.occupancy_percentage) &&
+  (v.status === "on_time" || v.status === "delayed") &&
+  isInt(v.delay_minutes) &&
+  (v.catchable === null || isBool(v.catchable)) &&
+  isIntOrNull(v.safety_buffer_minutes) &&
+  isStr(v.reason);
+
+export const isRecovery: Guard<RecoveryOut> = (v): v is RecoveryOut =>
+  isObj(v) &&
+  isStr(v.student_id) &&
+  RECOVERY_STATUSES.includes(String(v.status)) &&
+  (v.trigger === null || TRIGGERS.includes(String(v.trigger))) &&
+  (v.recommended === null || isRecoveryOption(v.recommended)) &&
+  arrayOf(isRecoveryOption)(v.alternatives) &&
+  // never an option without a recommendation, never a recommendation without a trigger
+  (v.status === "recovery_available"
+    ? v.recommended !== null && v.trigger !== null
+    : v.recommended === null && v.alternatives.length === 0);
+
+const ROUTE_STATUSES = [
+  "NORMAL",
+  "MINOR_DEVIATION",
+  "MAJOR_DEVIATION",
+  "NO_ACTIVE_TRIP",
+  "NO_ROUTE",
+  "NO_LIVE_DATA",
+  "STALE",
+  "INVALID_LOCATION",
+];
+
+export const isRouteStatus: Guard<RouteStatusResponse> = (v): v is RouteStatusResponse =>
+  isObj(v) &&
+  isStr(v.bus_id) &&
+  ROUTE_STATUSES.includes(String(v.route_status)) &&
+  (v.deviation_distance_m === null || isNum(v.deviation_distance_m)) &&
+  (v.expected_route === null || isLineString(v.expected_route)) &&
+  (v.current_location === null ||
+    (isObj(v.current_location) &&
+      isNum(v.current_location.lat) &&
+      isNum(v.current_location.lon))) &&
+  isStr(v.evaluated_at);

@@ -4,7 +4,8 @@
  *
  * Lightweight POLLING of `GET /buses`, `GET /students/me/arrivals` (matching +
  * backend ETA), `GET /students/me/bus-options` (backend multi-bus comparison),
- * `GET /students/me/commute-decision` (backend "Will I make my bus?") and
+ * `GET /students/me/commute-decision` (backend "Will I make my bus?"),
+ * `GET /students/me/recovery-options` (backend missed-bus recovery) and
  * `GET /sim/status` every few seconds —
  * the WebSocket feed replaces this later. The browser never computes bus
  * positions; it only displays what the backend reports.
@@ -17,6 +18,7 @@ import type {
   BusOut,
   CommuteDecisionOut,
   MyArrivalsOut,
+  RecoveryOut,
   SimStatusOut,
 } from "../api/types";
 
@@ -30,6 +32,8 @@ export interface LiveFleet {
   options: BusOptionsOut | null;
   /** Backend "Will I make my bus?" decision for the ASSIGNED bus. */
   commute: CommuteDecisionOut | null;
+  /** Backend missed-bus recovery (suggestions only). */
+  recovery: RecoveryOut | null;
   sim: SimStatusOut | null;
   error: Error | null;
   /** Wall-clock time of the last successful poll. */
@@ -49,23 +53,26 @@ export function useLiveFleet(pollMs: number = POLL_MS): LiveFleet {
   const [arrivals, setArrivals] = useState<MyArrivalsOut | null>(null);
   const [options, setOptions] = useState<BusOptionsOut | null>(null);
   const [commute, setCommute] = useState<CommuteDecisionOut | null>(null);
+  const [recovery, setRecovery] = useState<RecoveryOut | null>(null);
   const [sim, setSim] = useState<SimStatusOut | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [b, a, o, d, s] = await Promise.all([
+      const [b, a, o, d, r, s] = await Promise.all([
         api.listBuses(),
         api.myArrivals(),
         api.myBusOptions(),
         api.myCommuteDecision(),
+        api.myRecoveryOptions(),
         api.simStatus(),
       ]);
       setBuses(b);
       setArrivals(a);
       setOptions(o);
       setCommute(d);
+      setRecovery(r);
       setSim(s);
       setError(null);
       setFetchedAt(new Date());
@@ -105,6 +112,7 @@ export function useLiveFleet(pollMs: number = POLL_MS): LiveFleet {
     arrivals,
     options,
     commute,
+    recovery,
     sim,
     error,
     fetchedAt,

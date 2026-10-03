@@ -30,6 +30,16 @@ occupancy = min(capacity, synthetic simulator headcount + QR boardings on the cu
 
 Nothing is counted or derived in the browser, and there is no separate frontend state.
 
+**Route deviation** (Feature 10) — a _Route status_ column (Normal / Minor deviation /
+Major deviation + metres off route). Select a bus (its number) to open the route monitor:
+status, distance, fix time and a Leaflet map of the backend's planned route, the tracked bus
+position and the nearest point of the route (`GET /api/v1/buses/{id}/route-status`). The
+demo buttons **Normal / Simulate Minor Deviation / Simulate Major Deviation** call
+`POST /api/v1/sim/route-deviation` for that bus: the backend simulator moves the bus's
+SYNTHETIC GPS sideways — the route remains the planned route. **Active alerts**
+(`GET /api/v1/alerts?active=true`) shows the one alert raised when a bus enters a major
+deviation; it clears when the bus returns. Nothing is measured or classified in the browser.
+
 ## Checks
 
 ```bash

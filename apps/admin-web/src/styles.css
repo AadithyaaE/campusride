@@ -215,3 +215,84 @@ body {
   border-radius: 8px;
   border: 1px solid var(--border);
 }
+
+/* ------------------------------------------------- route deviation (F10) */
+
+.side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.layout:has(> .side) {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1100px) {
+  .layout:has(> .side) {
+    grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+    align-items: start;
+  }
+}
+.route-cell {
+  font-weight: 700;
+}
+.route-ok {
+  color: #15803d;
+}
+.route-minor {
+  color: #b45309;
+}
+.route-major {
+  color: #b91c1c;
+}
+.route-na {
+  color: var(--muted);
+  font-weight: 500;
+}
+.route-status {
+  margin: 10px 0 4px;
+  font-size: 1.05rem;
+}
+.route-banner {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-weight: 700;
+}
+.small {
+  font-size: 0.8rem;
+}
+.route-map {
+  height: 320px;
+  margin: 10px 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.alerts {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.alert {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.alert-critical {
+  background: #fef2f2;
+  border-color: #fecaca;
+}

@@ -36,6 +36,7 @@ export function fakeBackend(overrides: Record<string, Handler> = {}) {
     "GET /api/v1/students/me/bus-options": () => json(fx.myBusOptions),
     "GET /api/v1/students/me/commute-decision": () => json(fx.myCommute),
     "GET /api/v1/students/me/boarding": () => json(fx.myBoarding),
+    "GET /api/v1/students/me/recovery-options": () => json(fx.recoveryNotNeeded),
     "GET /api/v1/sim/status": () => json(sim),
     "POST /api/v1/sim/start": simCall({ paused: false, running: true }),
     "POST /api/v1/sim/pause": simCall({ paused: true, running: false }),

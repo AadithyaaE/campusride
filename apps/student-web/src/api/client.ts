@@ -22,6 +22,8 @@ import {
   isMyBoarding,
   isOccupancy,
   isTripBoarding,
+  isRecovery,
+  isRouteStatus,
   isBusDetail,
   isMe,
   isMyArrivals,
@@ -47,6 +49,8 @@ import type {
   MyBoardingOut,
   OccupancyOut,
   TripBoardingOut,
+  RecoveryOut,
+  RouteStatusResponse,
   MyArrivalsOut,
   StopArrivalsOut,
   BusDetailOut,
@@ -259,6 +263,21 @@ export class ApiClient {
 
   tripBoarding(tripId: string): Promise<TripBoardingOut> {
     return this.request(`/trips/${encodeURIComponent(tripId)}/boarding`, { guard: isTripBoarding });
+  }
+
+  /**
+   * Missed-bus recovery for the ASSIGNED bus at the ASSIGNED stop (Feature 9).
+   * Suggestions only — derived from the assignment, never a reassignment.
+   */
+  myRecoveryOptions(): Promise<RecoveryOut> {
+    return this.request("/students/me/recovery-options", { guard: isRecovery });
+  }
+
+  /** Backend route deviation of one bus vs. its PLANNED route (Feature 10). */
+  busRouteStatus(busId: string): Promise<RouteStatusResponse> {
+    return this.request(`/buses/${encodeURIComponent(busId)}/route-status`, {
+      guard: isRouteStatus,
+    });
   }
 
   listStops(): Promise<StopOut[]> {

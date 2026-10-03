@@ -27,6 +27,8 @@ from app.services.bus_simulator import BusSimulator
 from app.services.commute_decision_service import CommuteDecisionService
 from app.services.eta_service import EtaService
 from app.services.matching import MatchingService
+from app.services.missed_bus_service import MissedBusService
+from app.services.route_anomaly_service import RouteAnomalyService
 from app.services.student_location import StudentLocationSource
 from app.services.tracking import TelemetryIngestService
 
@@ -49,6 +51,7 @@ class AppContainer:
     comparison_service: BusComparisonService | None = None
     commute_service: CommuteDecisionService | None = None
     boarding_service: BoardingService | None = None
+    recovery_service: MissedBusService | None = None
 
     def matching(self) -> MatchingService:
         """Stop ↔ bus matching (caches static route data for the app's lifetime)."""
@@ -80,6 +83,12 @@ class AppContainer:
             )
         return self.commute_service
 
+    def recovery(self) -> MissedBusService:
+        """Missed-bus recovery on top of the commute decision (→ comparison → ETA → matching)."""
+        if self.recovery_service is None:
+            self.recovery_service = MissedBusService(self.commute(), self.settings, self.clock)
+        return self.recovery_service
+
     def boarding(self) -> BoardingService:
         """QR boarding + live occupancy; shares the ONE ingest service (occupancy writes)."""
         if self.boarding_service is None:
@@ -87,6 +96,10 @@ class AppContainer:
                 self.repos, self.clock, self.events, self.matching(), self.telemetry_ingest()
             )
         return self.boarding_service
+
+    def route_anomaly(self) -> RouteAnomalyService:
+        """Feature 10 — the SAME instance the telemetry pipeline uses for transitions."""
+        return self.telemetry_ingest().anomaly
 
     def telemetry_ingest(self) -> TelemetryIngestService:
         if self.ingest is None:

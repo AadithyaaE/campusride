@@ -24,6 +24,7 @@ import weakref
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import cast
 
 from app.core.auth import Principal, sim_driver_principal
 from app.core.clock import ALLOWED_SIM_SPEEDS, SimClock, derive_seed
@@ -36,6 +37,7 @@ from app.seed.loader import load_schedule
 from app.seed.trips import build_trips
 from app.services.tracking import TelemetryIngestService
 from app.simulator.bus_agent import BusPlan, build_trip_plan
+from app.simulator.deviation import MODES, DeviationMode, offset_point
 from app.simulator.gps_noise import jitter
 from app.simulator.traffic import TrafficModel
 
@@ -66,6 +68,8 @@ class SimulatorStatus:
     emissions: int
     telemetry_interval_s: float
     allowed_speeds: tuple[int, ...] = ALLOWED_SIM_SPEEDS
+    route_deviation: dict[str, str] | None = None
+    """Demo deviation modes in force: ``{"*": mode}`` for all buses and/or per bus id."""
 
 
 class BusSimulator:
@@ -93,6 +97,8 @@ class BusSimulator:
         self._emissions = 0
         self._service_date: str | None = None
         self._finished_trips: set[str] = set()
+        self._deviation: dict[str, DeviationMode] = {}
+        """Feature 10 demo: ``"*"`` = every bus, else per bus id. Empty = all normal."""
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -138,6 +144,29 @@ class BusSimulator:
             await self._prepare()
         return self.status()
 
+    def set_route_deviation(self, mode: str, bus_id: str | None = None) -> SimulatorStatus:
+        """Demo: shift simulated GPS off the planned route (all buses, or one bus).
+
+        The route geometry is never touched — only the synthetic position the
+        simulator reports, which then flows through telemetry → tracking.
+        """
+        if mode not in MODES:
+            raise ValueError(f"mode must be one of {list(MODES)}")
+        m = cast(DeviationMode, mode)
+        if bus_id is None:
+            self._deviation = {} if m == "normal" else {"*": m}
+        else:
+            if bus_id not in self._plans:
+                raise KeyError(bus_id)
+            if m == "normal" and "*" not in self._deviation:
+                self._deviation.pop(bus_id, None)
+            else:
+                self._deviation[bus_id] = m
+        return self.status()
+
+    def deviation_for(self, bus_id: str) -> DeviationMode:
+        return self._deviation.get(bus_id, self._deviation.get("*", "normal"))
+
     def set_speed(self, speed: float) -> SimulatorStatus:
         self._clock.set_speed(speed)
         return self.status()
@@ -154,6 +183,7 @@ class BusSimulator:
             buses=len(self._plans),
             emissions=self._emissions,
             telemetry_interval_s=self._interval,
+            route_deviation=dict(self._deviation),
         )
 
     # ------------------------------------------------------------------ preparation
@@ -201,6 +231,7 @@ class BusSimulator:
 
         self._grid_start = self._clock.start
         self._finished_trips = set()
+        self._deviation = {}  # reset / restart always returns to NORMAL
         self._k = 0
         self._emissions = 0
         await self._emit(self._grid_start)  # initial fixes at t0
@@ -254,7 +285,16 @@ class BusSimulator:
                     continue
                 self._finished_trips.add(s.trip_id)
             noise_rng = random.Random(derive_seed(self._settings.seed, "gps", bus_id, str(k)))
-            (lng, lat), accuracy = jitter(s.lnglat, sigma, noise_rng)
+            truth = s.lnglat
+            mode = self.deviation_for(bus_id)
+            if mode != "normal" and s.phase != "done":
+                offset = (
+                    self._settings.sim_deviation_minor_offset_m
+                    if mode == "minor"
+                    else self._settings.sim_deviation_major_offset_m
+                )
+                truth = offset_point(truth, s.heading_deg, offset, trip_plan.line)
+            (lng, lat), accuracy = jitter(truth, sigma, noise_rng)
             batch = TelemetryBatchIn(
                 bus_id=bus_id,
                 trip_id=s.trip_id,

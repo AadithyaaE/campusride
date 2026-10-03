@@ -14,6 +14,11 @@ export type BusOut = Schemas["BusOut"];
 export type BusLiveOut = Schemas["BusLiveOut"];
 export type TripBoardingOut = Schemas["TripBoardingOut"];
 export type BoardingEventOut = Schemas["BoardingEventOut"];
+export type RouteStatus = Schemas["RouteStatus"];
+export type RouteStatusResponse = Schemas["RouteStatusOut"];
+export type RouteDeviationDemoMode = Schemas["RouteDeviationIn"]["mode"];
+export type AlertOut = Schemas["AlertOut"];
+export type SimStatusOut = Schemas["SimStatusOut"];
 
 export class ApiError extends Error {
   readonly status: number;
@@ -51,6 +56,31 @@ const isBus: Guard<BusOut> = (v): v is BusOut =>
   isObj(v) && isStr(v.id) && isInt(v.capacity) && (v.live === null || isLive(v.live));
 const isEvent: Guard<BoardingEventOut> = (v): v is BoardingEventOut =>
   isObj(v) && isStr(v.boarding_id) && isStr(v.stop_id) && isStr(v.timestamp);
+const ROUTE_STATUSES = [
+  "NORMAL",
+  "MINOR_DEVIATION",
+  "MAJOR_DEVIATION",
+  "NO_ACTIVE_TRIP",
+  "NO_ROUTE",
+  "NO_LIVE_DATA",
+  "STALE",
+  "INVALID_LOCATION",
+];
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const isLatLon = (v: unknown) => isObj(v) && isNum(v.lat) && isNum(v.lon);
+const isRouteStatus: Guard<RouteStatusResponse> = (v): v is RouteStatusResponse =>
+  isObj(v) &&
+  isStr(v.bus_id) &&
+  ROUTE_STATUSES.includes(String(v.route_status)) &&
+  (v.deviation_distance_m === null || isNum(v.deviation_distance_m)) &&
+  (v.expected_route === null ||
+    (isObj(v.expected_route) && Array.isArray(v.expected_route.coordinates))) &&
+  (v.current_location === null || isLatLon(v.current_location)) &&
+  (v.nearest_route_point === null || isLatLon(v.nearest_route_point));
+const isAlert: Guard<AlertOut> = (v): v is AlertOut =>
+  isObj(v) && isStr(v.id) && isStr(v.body) && typeof v.active === "boolean";
+const isSimStatus: Guard<SimStatusOut> = (v): v is SimStatusOut =>
+  isObj(v) && typeof v.enabled === "boolean" && isObj(v.route_deviation);
 const isTripBoarding: Guard<TripBoardingOut> = (v): v is TripBoardingOut =>
   isObj(v) && isStr(v.trip_id) && isInt(v.total_boarded) && arrayOf(isEvent)(v.events);
 
@@ -94,6 +124,24 @@ export class AdminApi {
   /** Boarding events of a trip (admins see every event). */
   tripBoarding(tripId: string): Promise<TripBoardingOut> {
     return this.request(`/trips/${encodeURIComponent(tripId)}/boarding`, {}, isTripBoarding);
+  }
+
+  /** Backend route deviation of one bus vs. its PLANNED route (Feature 10). */
+  routeStatus(busId: string): Promise<RouteStatusResponse> {
+    return this.request(`/buses/${encodeURIComponent(busId)}/route-status`, {}, isRouteStatus);
+  }
+
+  /** Demo control: shift a simulated bus's GPS off its route (the route itself never changes). */
+  setRouteDeviation(mode: RouteDeviationDemoMode, busId: string | null): Promise<SimStatusOut> {
+    return this.request(
+      "/sim/route-deviation",
+      { method: "POST", body: { mode, bus_id: busId } },
+      isSimStatus,
+    );
+  }
+
+  alerts(activeOnly = true): Promise<AlertOut[]> {
+    return this.request(`/alerts${activeOnly ? "?active=true" : ""}`, {}, arrayOf(isAlert));
   }
 
   private async request<T>(

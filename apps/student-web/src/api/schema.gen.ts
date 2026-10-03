@@ -277,6 +277,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/buses/{bus_id}/route-status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Route Status
+     * @description Distance from the TRACKED position to the PLANNED route geometry, and its status.
+     *
+     *     The route remains the planned route; demo deviation changes the synthetic bus position.
+     */
+    get: operations["route_status_api_v1_buses__bus_id__route_status_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/driver/telemetry": {
     parameters: {
       query?: never;
@@ -379,6 +401,29 @@ export interface paths {
     /** Sim Speed */
     put: operations["sim_speed_api_v1_sim_speed_put"];
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/sim/route-deviation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Sim Route Deviation
+     * @description Demo: ``normal`` / ``minor`` / ``major`` deviation for one simulated bus or all of them.
+     *
+     *     Changes only the synthetic GPS the simulator emits (the planned route is untouched);
+     *     the backend then classifies the tracked position. Reset returns every bus to normal.
+     */
+    post: operations["sim_route_deviation_api_v1_sim_route_deviation_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -555,6 +600,48 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/students/me/recovery-options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My Recovery Options
+     * @description Missed-bus recovery at the student's ASSIGNED stop (suggestions only — never a reassignment).
+     *
+     *     Derived entirely from the assignment; query parameters cannot change the student, stop or bus.
+     */
+    get: operations["my_recovery_options_api_v1_students_me_recovery_options_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/students/{student_id}/recovery-options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Student Recovery Options
+     * @description Same recovery options for a given student: the student themself, or an admin.
+     */
+    get: operations["student_recovery_options_api_v1_students__student_id__recovery_options_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/boarding/scan": {
     parameters: {
       query?: never;
@@ -598,10 +685,55 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/alerts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Alerts
+     * @description Most recent alerts first (created from backend state transitions, never from polling).
+     */
+    get: operations["list_alerts_api_v1_alerts_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AlertOut */
+    AlertOut: {
+      /** Id */
+      id: string;
+      /** Type */
+      type: string;
+      severity: components["schemas"]["Severity"];
+      /** Title */
+      title: string;
+      /** Body */
+      body: string;
+      /** Payload */
+      payload: {
+        [key: string]: unknown;
+      };
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Resolved At */
+      resolved_at: string | null;
+      /** Active */
+      active: boolean;
+    };
     /**
      * ArrivalOut
      * @description A bus serving the stop (Feature 4 matching) + its backend ETA.
@@ -652,6 +784,9 @@ export interface components {
       last_updated: string;
       /** Stale */
       stale: boolean;
+      route_status: components["schemas"]["RouteStatus"] | null;
+      /** Deviation Distance M */
+      deviation_distance_m: number | null;
       position: components["schemas"]["BusPositionOut"];
       match: components["schemas"]["StopMatchOut"] | null;
       /**
@@ -905,6 +1040,9 @@ export interface components {
       occupancy_percentage: number | null;
       /** Boarded Count */
       boarded_count: number;
+      route_status: components["schemas"]["RouteStatus"] | null;
+      /** Deviation Distance M */
+      deviation_distance_m: number | null;
       /**
        * Last Updated
        * Format: date-time
@@ -960,6 +1098,9 @@ export interface components {
       last_updated: string;
       /** Stale */
       stale: boolean;
+      route_status: components["schemas"]["RouteStatus"] | null;
+      /** Deviation Distance M */
+      deviation_distance_m: number | null;
       position: components["schemas"]["BusPositionOut"];
       match: components["schemas"]["StopMatchOut"] | null;
       /**
@@ -1209,6 +1350,24 @@ export interface components {
        */
       reason: "passed_stop" | "trip_completed";
     };
+    /** ExcludedRecoveryBusOut */
+    ExcludedRecoveryBusOut: {
+      /** Bus Id */
+      bus_id: string;
+      /**
+       * Reason
+       * @enum {string}
+       */
+      reason:
+        | "at_stop_now"
+        | "stale"
+        | "breakdown"
+        | "off_route"
+        | "full"
+        | "too_late"
+        | "passed_stop"
+        | "trip_completed";
+    };
     /**
      * FleetStatus
      * @description Administrative status of a bus (not its live driving state).
@@ -1251,6 +1410,13 @@ export interface components {
        */
       db: "ok" | "down" | "not_configured";
       clock: components["schemas"]["ClockOut"];
+    };
+    /** LatLonOut */
+    LatLonOut: {
+      /** Lat */
+      lat: number;
+      /** Lon */
+      lon: number;
     };
     /**
      * LineString
@@ -1410,6 +1576,97 @@ export interface components {
       /** Updated At */
       updated_at: string | null;
     };
+    /** RecoveryOptionOut */
+    RecoveryOptionOut: {
+      /** Bus Id */
+      bus_id: string;
+      /** Bus Number */
+      bus_number: string;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Route Id */
+      route_id: string;
+      /** Route Direction Id */
+      route_direction_id: string;
+      /** Route Name */
+      route_name: string;
+      direction: components["schemas"]["Direction"];
+      /** Boarding Stop Id */
+      boarding_stop_id: string;
+      /** Boarding Stop Name */
+      boarding_stop_name: string;
+      /** Eta Minutes */
+      eta_minutes: number | null;
+      /** Estimated Arrival Time */
+      estimated_arrival_time: string | null;
+      eta: components["schemas"]["EtaPredictionOut"];
+      /** Occupancy */
+      occupancy: number;
+      /** Capacity */
+      capacity: number;
+      /** Available Seats */
+      available_seats: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "on_time" | "delayed";
+      bus_status: components["schemas"]["BusStatus"];
+      /** Delay Minutes */
+      delay_minutes: number;
+      /** Distance To Stop M */
+      distance_to_stop_m: number | null;
+      /** Stops Away */
+      stops_away: number | null;
+      /** Catchable */
+      catchable: boolean | null;
+      /** Safety Buffer Minutes */
+      safety_buffer_minutes: number | null;
+      /** Walking Time Minutes */
+      walking_time_minutes: number | null;
+      /** Reason */
+      reason: string;
+    };
+    /** RecoveryOut */
+    RecoveryOut: {
+      /** Student Id */
+      student_id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "recovery_available" | "not_needed" | "no_alternative" | "unassigned";
+      /** Trigger */
+      trigger: ("missed" | "likely_to_miss" | "significantly_delayed") | null;
+      /** Commute Decision */
+      commute_decision: ("YES" | "RISK" | "MISSED" | "LOCATION_UNAVAILABLE" | "UNKNOWN") | null;
+      /** Assigned Bus Id */
+      assigned_bus_id: string | null;
+      /** Assigned Bus */
+      assigned_bus: string | null;
+      /** Assigned Bus Delay Minutes */
+      assigned_bus_delay_minutes: number | null;
+      /** Boarding Stop Id */
+      boarding_stop_id: string | null;
+      /** Boarding Stop Name */
+      boarding_stop_name: string | null;
+      /** Route Direction Id */
+      route_direction_id: string | null;
+      /** Required Buffer Minutes */
+      required_buffer_minutes: number;
+      recommended: components["schemas"]["RecoveryOptionOut"] | null;
+      /** Alternatives */
+      alternatives: components["schemas"]["RecoveryOptionOut"][];
+      /** Excluded */
+      excluded: components["schemas"]["ExcludedRecoveryBusOut"][];
+      /**
+       * Computed At
+       * Format: date-time
+       */
+      computed_at: string;
+    };
     /**
      * Role
      * @enum {string}
@@ -1429,6 +1686,19 @@ export interface components {
       /** Directions */
       directions: components["schemas"]["RouteDirectionOut"][];
     };
+    /**
+     * RouteDeviationIn
+     * @description Demo control (Feature 10): shift SYNTHETIC GPS off the planned route.
+     */
+    RouteDeviationIn: {
+      /**
+       * Mode
+       * @enum {string}
+       */
+      mode: "normal" | "minor" | "major";
+      /** Bus Id */
+      bus_id?: string | null;
+    };
     /** RouteDirectionOut */
     RouteDirectionOut: {
       /** Variant Id */
@@ -1438,6 +1708,57 @@ export interface components {
       label: string;
       /** Stops */
       stops: components["schemas"]["RouteStopOut"][];
+    };
+    /**
+     * RouteStatus
+     * @description Feature 10: a bus relative to its PLANNED route geometry (see route_anomaly_service).
+     * @enum {string}
+     */
+    RouteStatus:
+      | "NORMAL"
+      | "MINOR_DEVIATION"
+      | "MAJOR_DEVIATION"
+      | "NO_ACTIVE_TRIP"
+      | "NO_ROUTE"
+      | "NO_LIVE_DATA"
+      | "STALE"
+      | "INVALID_LOCATION";
+    /**
+     * RouteStatusOut
+     * @description The route remains the planned route; demo deviation changes the synthetic bus position.
+     */
+    RouteStatusOut: {
+      /** Bus Id */
+      bus_id: string;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Route Id */
+      route_id: string | null;
+      /** Route Direction Id */
+      route_direction_id: string | null;
+      route_status: components["schemas"]["RouteStatus"];
+      /** Deviation Distance M */
+      deviation_distance_m: number | null;
+      thresholds: components["schemas"]["RouteThresholdsOut"];
+      expected_route: components["schemas"]["LineString"] | null;
+      current_location: components["schemas"]["LatLonOut"] | null;
+      nearest_route_point: components["schemas"]["LatLonOut"] | null;
+      /** Timestamp */
+      timestamp: string | null;
+      /**
+       * Evaluated At
+       * Format: date-time
+       */
+      evaluated_at: string;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "synthetic" | "device";
+      /** Major Alert Active */
+      major_alert_active: boolean;
+      /** Message */
+      message: string | null;
     };
     /** RouteStopOut */
     RouteStopOut: {
@@ -1468,6 +1789,18 @@ export interface components {
       /** Directions */
       directions: components["schemas"]["DirectionSummaryOut"][];
     };
+    /** RouteThresholdsOut */
+    RouteThresholdsOut: {
+      /** Minor M */
+      minor_m: number;
+      /** Major M */
+      major_m: number;
+    };
+    /**
+     * Severity
+     * @enum {string}
+     */
+    Severity: "info" | "warning" | "critical";
     /** SimStatusOut */
     SimStatusOut: {
       /** Enabled */
@@ -1494,6 +1827,10 @@ export interface components {
       telemetry_interval_s: number | null;
       /** Controls Allowed */
       controls_allowed: boolean;
+      /** Route Deviation */
+      route_deviation: {
+        [key: string]: "normal" | "minor" | "major";
+      };
     };
     /** SpeedIn */
     SpeedIn: {
@@ -1553,6 +1890,9 @@ export interface components {
       last_updated: string;
       /** Stale */
       stale: boolean;
+      route_status: components["schemas"]["RouteStatus"] | null;
+      /** Deviation Distance M */
+      deviation_distance_m: number | null;
       position: components["schemas"]["BusPositionOut"];
       match: components["schemas"]["StopMatchOut"] | null;
       /**
@@ -2177,6 +2517,37 @@ export interface operations {
       };
     };
   };
+  route_status_api_v1_buses__bus_id__route_status_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bus_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouteStatusOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   post_telemetry_api_v1_driver_telemetry_post: {
     parameters: {
       query?: never;
@@ -2300,6 +2671,39 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["SpeedIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SimStatusOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  sim_route_deviation_api_v1_sim_route_deviation_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RouteDeviationIn"];
       };
     };
     responses: {
@@ -2505,6 +2909,57 @@ export interface operations {
       };
     };
   };
+  my_recovery_options_api_v1_students_me_recovery_options_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RecoveryOut"];
+        };
+      };
+    };
+  };
+  student_recovery_options_api_v1_students__student_id__recovery_options_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        student_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RecoveryOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   scan_api_v1_boarding_scan_post: {
     parameters: {
       query?: never;
@@ -2556,6 +3011,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["TripBoardingOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_alerts_api_v1_alerts_get: {
+    parameters: {
+      query?: {
+        /** @description Only alerts whose condition is still ongoing */
+        active?: boolean;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertOut"][];
         };
       };
       /** @description Validation Error */

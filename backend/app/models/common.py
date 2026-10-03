@@ -117,6 +117,19 @@ class BusStatus(StrEnum):
     COMPLETED = "completed"
 
 
+class RouteStatus(StrEnum):
+    """Feature 10: a bus relative to its PLANNED route geometry (see route_anomaly_service)."""
+
+    NORMAL = "NORMAL"
+    MINOR_DEVIATION = "MINOR_DEVIATION"
+    MAJOR_DEVIATION = "MAJOR_DEVIATION"
+    NO_ACTIVE_TRIP = "NO_ACTIVE_TRIP"
+    NO_ROUTE = "NO_ROUTE"
+    NO_LIVE_DATA = "NO_LIVE_DATA"
+    STALE = "STALE"
+    INVALID_LOCATION = "INVALID_LOCATION"
+
+
 class BoardingType(StrEnum):
     BOARD = "board"
     ALIGHT = "alight"

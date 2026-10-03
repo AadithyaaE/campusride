@@ -194,6 +194,10 @@ class TelemetryIngestService:
         self._routes: dict[str, Route] = {}
         self._buses: dict[str, Bus] = {}
         self._locks: dict[str, asyncio.Lock] = {}
+        from app.services.route_anomaly_service import RouteAnomalyService  # avoids an import cycle
+
+        self.anomaly = RouteAnomalyService(repos, events, settings, clock)
+        """Feature 10 — evaluated on every fix, so deviation alerts follow state, not polling."""
 
     def _lock_for(self, bus_id: str) -> asyncio.Lock:
         """Serialises BusState read-modify-write per bus (telemetry vs. QR boarding)."""
@@ -284,6 +288,7 @@ class TelemetryIngestService:
 
         async with self._lock_for(bus.id):
             state = await self._repos.bus_states.get(bus.id)
+            before = state
             for p in points:
                 prev = state
                 state = self._tracking.derive(prev, bus, trip, route, p)
@@ -292,6 +297,9 @@ class TelemetryIngestService:
                     await self._stop_events(prev, state, p.ts)
             assert state is not None
             state = await self._with_boardings(state, bus)  # simulator ticks never erase boardings
+            state = await self.anomaly.apply(
+                before, state, route, source="synthetic" if source is BusSource.SIM else "device"
+            )
             await self._repos.bus_states.upsert(state)
         await self._events.publish(BusStateUpdated(ts=state.ts, state=state))
         return state

@@ -10,7 +10,7 @@ each as its own module registered here.
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, boarding, buses, driver, health, routes, sim, stops, students
+from app.api.v1 import alerts, auth, boarding, buses, driver, health, routes, sim, stops, students
 
 api_router = APIRouter()
 api_router.include_router(health.router)
@@ -22,3 +22,4 @@ api_router.include_router(driver.router)
 api_router.include_router(sim.router)
 api_router.include_router(students.router)
 api_router.include_router(boarding.router)
+api_router.include_router(alerts.router)

@@ -61,6 +61,8 @@ function bus(
       available_seats: 50 - occupancy,
       occupancy_percentage: Math.round((100 * occupancy) / 50),
       boarded_count: 0,
+      route_status: "NORMAL",
+      deviation_distance_m: 5.1,
       last_updated: "2026-10-05T02:10:00Z",
       stale: false,
       ...extra,
@@ -160,7 +162,7 @@ describe("Admin dashboard — live occupancy from the backend", () => {
     expect(b05).toHaveTextContent("76%");
     expect(b05).toHaveTextContent("12");
     expect(within(table).queryByRole("row", { name: "Bus B09" })).not.toBeInTheDocument(); // no trip
-    expect(table).toHaveTextContent("Synthetic baseline + simulated QR scans");
+    expect(table).toHaveTextContent("baseline + simulated QR scans");
   });
 
   it("reflects a QR scan on the next poll", async () => {
@@ -171,7 +173,8 @@ describe("Admin dashboard — live occupancy from the backend", () => {
       vi.advanceTimersByTime(POLL_MS);
     });
     await flush();
-    const row = within(table).getByRole("row", { name: "Bus B05" });
+    await flush();
+    const row = await within(table).findByRole("row", { name: "Bus B05" });
     expect(row).toHaveTextContent("39 / 50");
     expect(row).toHaveTextContent("78%");
     expect(b.calls.filter((c) => c === "GET /api/v1/buses").length).toBeGreaterThanOrEqual(2);
