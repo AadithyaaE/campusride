@@ -1,0 +1,86 @@
+[
+  {
+    "id": "D01",
+    "name": "Murugan Selvam",
+    "email": "driver01@campusride.demo",
+    "phone": "+91 90000 00001",
+    "license_no": "TN00 2015 0001201"
+  },
+  {
+    "id": "D02",
+    "name": "Rajesh Kumar",
+    "email": "driver02@campusride.demo",
+    "phone": "+91 90000 00002",
+    "license_no": "TN00 2015 0001202"
+  },
+  {
+    "id": "D03",
+    "name": "Senthil Nathan",
+    "email": "driver03@campusride.demo",
+    "phone": "+91 90000 00003",
+    "license_no": "TN00 2015 0001203"
+  },
+  {
+    "id": "D04",
+    "name": "Karthik Raja",
+    "email": "driver04@campusride.demo",
+    "phone": "+91 90000 00004",
+    "license_no": "TN00 2015 0001204"
+  },
+  {
+    "id": "D05",
+    "name": "Anbu Chelvan",
+    "email": "driver05@campusride.demo",
+    "phone": "+91 90000 00005",
+    "license_no": "TN00 2015 0001205"
+  },
+  {
+    "id": "D06",
+    "name": "Prakash Mani",
+    "email": "driver06@campusride.demo",
+    "phone": "+91 90000 00006",
+    "license_no": "TN00 2015 0001206"
+  },
+  {
+    "id": "D07",
+    "name": "Venkatesh Babu",
+    "email": "driver07@campusride.demo",
+    "phone": "+91 90000 00007",
+    "license_no": "TN00 2015 0001207"
+  },
+  {
+    "id": "D08",
+    "name": "Saravanan Pillai",
+    "email": "driver08@campusride.demo",
+    "phone": "+91 90000 00008",
+    "license_no": "TN00 2015 0001208"
+  },
+  {
+    "id": "D09",
+    "name": "Dinesh Kannan",
+    "email": "driver09@campusride.demo",
+    "phone": "+91 90000 00009",
+    "license_no": "TN00 2015 0001209"
+  },
+  {
+    "id": "D10",
+    "name": "Ganesh Moorthy",
+    "email": "driver10@campusride.demo",
+    "phone": "+91 90000 00010",
+    "license_no": "TN00 2015 0001210"
+  },
+  {
+    "id": "D11",
+    "name": "Arul Prakasam",
+    "email": "driver11@campusride.demo",
+    "phone": "+91 90000 00011",
+    "license_no": "TN00 2015 0001211"
+  },
+  {
+    "id": "D12",
+    "name": "Bala Subramani",
+    "email": "driver12@campusride.demo",
+    "phone": "+91 90000 00012",
+    "license_no": "TN00 2015 0001212"
+  }
+]

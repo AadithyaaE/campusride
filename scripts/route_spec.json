@@ -1,0 +1,228 @@
+{
+  "_comment": "Authoring input for scripts/author_routes.py. Coordinates are [lng, lat] (GeoJSON order) and only approximate: stops are snapped onto the OSRM road geometry. The campus, stop names and routes are FICTIONAL; only the Chennai road network is real (OpenStreetMap via OSRM).",
+  "osrm_base_url": "https://router.project-osrm.org",
+  "campus_id": "C01",
+  "default_dwell_s": 30,
+  "shared_stop_dwell_s": 45,
+  "terminal_dwell_s": 0,
+  "anchors": {
+    "MDK_E": [80.194, 12.91729],
+    "SNL_W": [80.22362, 12.90111],
+    "ECR_N": [80.2522, 12.93498],
+    "ECR_LINK": [80.2399, 12.899],
+    "GDY_VMR": [80.21647, 12.99726],
+    "TARAMANI_LINK": [80.23222, 12.98207]
+  },
+  "stops": {
+    "S00": {
+      "name": "CampusRide Institute of Technology",
+      "approx": [80.20921, 12.90498],
+      "terminal": true
+    },
+    "S01": {
+      "name": "Tambaram Railway Station",
+      "approx": [80.12751, 12.9249]
+    },
+    "S02": {
+      "name": "Tambaram East",
+      "approx": [80.134, 12.9232]
+    },
+    "S03": {
+      "name": "Camp Road Junction",
+      "approx": [80.14747, 12.92266]
+    },
+    "S04": {
+      "name": "Rajakilpakkam",
+      "approx": [80.156, 12.9228]
+    },
+    "S05": {
+      "name": "Gowrivakkam",
+      "approx": [80.1625, 12.9212]
+    },
+    "S06": {
+      "name": "Sembakkam",
+      "approx": [80.168, 12.92]
+    },
+    "S07": {
+      "name": "Santhosapuram",
+      "approx": [80.1765, 12.9192]
+    },
+    "S08": {
+      "name": "Medavakkam Koot Road",
+      "approx": [80.194, 12.91729]
+    },
+    "S09": {
+      "name": "Velachery Vijayanagar",
+      "approx": [80.2204, 12.9756]
+    },
+    "S10": {
+      "name": "Velachery Check Post",
+      "approx": [80.2185, 12.9697]
+    },
+    "S11": {
+      "name": "Baby Nagar",
+      "approx": [80.216, 12.962]
+    },
+    "S12": {
+      "name": "Pallikaranai",
+      "approx": [80.2112, 12.9512]
+    },
+    "S13": {
+      "name": "Kamakoti Nagar",
+      "approx": [80.205, 12.938]
+    },
+    "S14": {
+      "name": "Jalladianpet",
+      "approx": [80.1985, 12.927]
+    },
+    "S15": {
+      "name": "Chromepet",
+      "approx": [80.1462, 12.95159]
+    },
+    "S16": {
+      "name": "Hasthinapuram",
+      "approx": [80.14325, 12.94409]
+    },
+    "S17": {
+      "name": "Nehru Nagar",
+      "approx": [80.1445, 12.936]
+    },
+    "S18": {
+      "name": "Chitlapakkam",
+      "approx": [80.1483, 12.92981]
+    },
+    "S19": {
+      "name": "Thiruvanmiyur Bus Terminus",
+      "approx": [80.25937, 12.983]
+    },
+    "S20": {
+      "name": "Tidel Park",
+      "approx": [80.25274, 12.9799]
+    },
+    "S21": {
+      "name": "Kandanchavadi",
+      "approx": [80.249, 12.969]
+    },
+    "S22": {
+      "name": "Perungudi",
+      "approx": [80.246, 12.9605]
+    },
+    "S23": {
+      "name": "Seevaram",
+      "approx": [80.242, 12.95]
+    },
+    "S24": {
+      "name": "Thoraipakkam",
+      "approx": [80.2357, 12.9396]
+    },
+    "S25": {
+      "name": "Karapakkam",
+      "approx": [80.2316, 12.9225]
+    },
+    "S26": {
+      "name": "Kumaran Nagar",
+      "approx": [80.2296, 12.9105]
+    },
+    "S27": {
+      "name": "Sholinganallur Junction",
+      "approx": [80.22789, 12.901]
+    },
+    "S28": {
+      "name": "Guindy",
+      "approx": [80.2128, 13.0075]
+    },
+    "S29": {
+      "name": "Five Furlong Road",
+      "approx": [80.2135, 13.001]
+    },
+    "S30": {
+      "name": "Velachery Main Road",
+      "approx": [80.2195, 12.9925]
+    },
+    "S31": {
+      "name": "Gandhi Road",
+      "approx": [80.227, 12.9862]
+    },
+    "S32": {
+      "name": "Taramani",
+      "approx": [80.234, 12.9815]
+    },
+    "S33": {
+      "name": "Taramani Link Road",
+      "approx": [80.244, 12.9805]
+    },
+    "S34": {
+      "name": "Kottivakkam",
+      "approx": [80.2585, 12.9679]
+    },
+    "S35": {
+      "name": "Palavakkam",
+      "approx": [80.2565, 12.958]
+    },
+    "S36": {
+      "name": "Neelankarai",
+      "approx": [80.2545, 12.948]
+    },
+    "S37": {
+      "name": "Injambakkam",
+      "approx": [80.25, 12.923]
+    },
+    "S38": {
+      "name": "Akkarai",
+      "approx": [80.2462, 12.8978]
+    }
+  },
+  "routes": [
+    {
+      "id": "R1",
+      "name": "Tambaram",
+      "color": "#E4572E",
+      "waypoints": ["S01", "MDK_E", "S00"],
+      "stops": ["S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08", "S00"]
+    },
+    {
+      "id": "R2",
+      "name": "Velachery",
+      "color": "#2E86AB",
+      "waypoints": ["S09", "MDK_E", "S00"],
+      "stops": ["S09", "S10", "S11", "S12", "S13", "S14", "S08", "S00"]
+    },
+    {
+      "id": "R3",
+      "name": "Thiruvanmiyur – OMR",
+      "color": "#3BB273",
+      "waypoints": ["S19", "SNL_W", "S00"],
+      "stops": ["S19", "S20", "S21", "S22", "S23", "S24", "S25", "S26", "S27", "S00"],
+      "highway_spans": [
+        ["S20", "S27"]
+      ]
+    },
+    {
+      "id": "R4",
+      "name": "Guindy – Taramani",
+      "color": "#7768AE",
+      "waypoints": ["S28", "GDY_VMR", "TARAMANI_LINK", "S20", "S24", "SNL_W", "S00"],
+      "stops": ["S28", "S29", "S30", "S31", "S32", "S33", "S20", "S24", "S27", "S00"],
+      "highway_spans": [
+        ["S20", "S27"]
+      ]
+    },
+    {
+      "id": "R5",
+      "name": "Chromepet",
+      "color": "#F2A541",
+      "waypoints": ["S15", "MDK_E", "S00"],
+      "stops": ["S15", "S16", "S17", "S18", "S06", "S08", "S00"]
+    },
+    {
+      "id": "R6",
+      "name": "ECR – Neelankarai",
+      "color": "#D1495B",
+      "waypoints": ["S19", "ECR_N", "ECR_LINK", "SNL_W", "S00"],
+      "stops": ["S19", "S34", "S35", "S36", "S37", "S38", "S27", "S00"],
+      "highway_spans": [
+        ["S19", "S38"]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "_comment": "Departure = scheduled start at the variant's first stop, campus-local time. Scheduled stop offsets are derived from distance at schedule_speed_kmph plus dwell.",
+  "schedule_speed_kmph": 22,
+  "windows": {
+    "to_campus": [
+      "07:00",
+      "08:30"
+    ],
+    "from_campus": [
+      "16:30",
+      "18:00"
+    ]
+  },
+  "trips": [
+    {
+      "bus_id": "B01",
+      "route_id": "R1",
+      "direction": "to_campus",
+      "departure": "07:15"
+    },
+    {
+      "bus_id": "B01",
+      "route_id": "R1",
+      "direction": "from_campus",
+      "departure": "16:30"
+    },
+    {
+      "bus_id": "B02",
+      "route_id": "R1",
+      "direction": "to_campus",
+      "departure": "07:30"
+    },
+    {
+      "bus_id": "B02",
+      "route_id": "R1",
+      "direction": "from_campus",
+      "departure": "16:50"
+    },
+    {
+      "bus_id": "B03",
+      "route_id": "R2",
+      "direction": "to_campus",
+      "departure": "07:18"
+    },
+    {
+      "bus_id": "B03",
+      "route_id": "R2",
+      "direction": "from_campus",
+      "departure": "16:32"
+    },
+    {
+      "bus_id": "B04",
+      "route_id": "R2",
+      "direction": "to_campus",
+      "departure": "07:33"
+    },
+    {
+      "bus_id": "B04",
+      "route_id": "R2",
+      "direction": "from_campus",
+      "departure": "16:52"
+    },
+    {
+      "bus_id": "B05",
+      "route_id": "R3",
+      "direction": "to_campus",
+      "departure": "07:15"
+    },
+    {
+      "bus_id": "B05",
+      "route_id": "R3",
+      "direction": "from_campus",
+      "departure": "16:30"
+    },
+    {
+      "bus_id": "B06",
+      "route_id": "R3",
+      "direction": "to_campus",
+      "departure": "07:28"
+    },
+    {
+      "bus_id": "B06",
+      "route_id": "R3",
+      "direction": "from_campus",
+      "departure": "16:55"
+    },
+    {
+      "bus_id": "B07",
+      "route_id": "R4",
+      "direction": "to_campus",
+      "departure": "07:15"
+    },
+    {
+      "bus_id": "B07",
+      "route_id": "R4",
+      "direction": "from_campus",
+      "departure": "16:35"
+    },
+    {
+      "bus_id": "B08",
+      "route_id": "R4",
+      "direction": "to_campus",
+      "departure": "07:27"
+    },
+    {
+      "bus_id": "B08",
+      "route_id": "R4",
+      "direction": "from_campus",
+      "departure": "17:00"
+    },
+    {
+      "bus_id": "B09",
+      "route_id": "R5",
+      "direction": "to_campus",
+      "departure": "07:20"
+    },
+    {
+      "bus_id": "B09",
+      "route_id": "R5",
+      "direction": "from_campus",
+      "departure": "16:33"
+    },
+    {
+      "bus_id": "B10",
+      "route_id": "R5",
+      "direction": "to_campus",
+      "departure": "07:35"
+    },
+    {
+      "bus_id": "B10",
+      "route_id": "R5",
+      "direction": "from_campus",
+      "departure": "16:53"
+    },
+    {
+      "bus_id": "B11",
+      "route_id": "R6",
+      "direction": "to_campus",
+      "departure": "07:17"
+    },
+    {
+      "bus_id": "B11",
+      "route_id": "R6",
+      "direction": "from_campus",
+      "departure": "16:31"
+    },
+    {
+      "bus_id": "B12",
+      "route_id": "R6",
+      "direction": "to_campus",
+      "departure": "07:32"
+    },
+    {
+      "bus_id": "B12",
+      "route_id": "R6",
+      "direction": "from_campus",
+      "departure": "16:56"
+    }
+  ]
+}

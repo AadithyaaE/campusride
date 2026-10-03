@@ -1,0 +1,45 @@
+name: campusride
+
+services:
+  mongo:
+    image: mongo:7.0 # time-series collections + TTL need >= 5.0; 7.0 is the current LTS line
+    container_name: campusride-mongo
+    ports:
+      - "127.0.0.1:27017:27017" # localhost only — no auth in the prototype
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mongo-express: # optional DB browser: docker compose --profile tools up -d
+    image: mongo-express:1.0
+    profiles: ["tools"]
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  backend: # optional containerised API: docker compose --profile full up -d --build
+    build: ../backend
+    profiles: ["full"]
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo_data:

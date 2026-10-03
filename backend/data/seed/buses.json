@@ -1,0 +1,98 @@
+[
+  {
+    "id": "B01",
+    "reg_no": "TN 00 CR 1001",
+    "capacity": 50,
+    "default_route_id": "R1",
+    "driver_id": "D01",
+    "source": "sim"
+  },
+  {
+    "id": "B02",
+    "reg_no": "TN 00 CR 1002",
+    "capacity": 50,
+    "default_route_id": "R1",
+    "driver_id": "D02",
+    "source": "sim"
+  },
+  {
+    "id": "B03",
+    "reg_no": "TN 00 CR 1003",
+    "capacity": 50,
+    "default_route_id": "R2",
+    "driver_id": "D03",
+    "source": "sim"
+  },
+  {
+    "id": "B04",
+    "reg_no": "TN 00 CR 1004",
+    "capacity": 50,
+    "default_route_id": "R2",
+    "driver_id": "D04",
+    "source": "sim"
+  },
+  {
+    "id": "B05",
+    "reg_no": "TN 00 CR 1005",
+    "capacity": 50,
+    "default_route_id": "R3",
+    "driver_id": "D05",
+    "source": "sim"
+  },
+  {
+    "id": "B06",
+    "reg_no": "TN 00 CR 1006",
+    "capacity": 40,
+    "default_route_id": "R3",
+    "driver_id": "D06",
+    "source": "sim"
+  },
+  {
+    "id": "B07",
+    "reg_no": "TN 00 CR 1007",
+    "capacity": 50,
+    "default_route_id": "R4",
+    "driver_id": "D07",
+    "source": "sim"
+  },
+  {
+    "id": "B08",
+    "reg_no": "TN 00 CR 1008",
+    "capacity": 50,
+    "default_route_id": "R4",
+    "driver_id": "D08",
+    "source": "sim"
+  },
+  {
+    "id": "B09",
+    "reg_no": "TN 00 CR 1009",
+    "capacity": 50,
+    "default_route_id": "R5",
+    "driver_id": "D09",
+    "source": "sim"
+  },
+  {
+    "id": "B10",
+    "reg_no": "TN 00 CR 1010",
+    "capacity": 40,
+    "default_route_id": "R5",
+    "driver_id": "D10",
+    "source": "sim"
+  },
+  {
+    "id": "B11",
+    "reg_no": "TN 00 CR 1011",
+    "capacity": 50,
+    "default_route_id": "R6",
+    "driver_id": "D11",
+    "source": "sim"
+  },
+  {
+    "id": "B12",
+    "reg_no": "TN 00 CR 1012",
+    "capacity": 50,
+    "default_route_id": "R6",
+    "driver_id": "D12",
+    "source": "sim"
+  }
+]

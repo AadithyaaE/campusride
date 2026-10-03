@@ -1,0 +1,535 @@
+/**
+ * Small, deliberately FAKE response objects shaped exactly like the backend
+ * contract (typed with the generated OpenAPI types). They are NOT copies of the
+ * seed data — names and ids are invented so tests never pin the real network.
+ */
+import type {
+  ArrivalOut,
+  BusOptionOut,
+  BusOptionsOut,
+  EtaPredictionOut,
+  MyArrivalsOut,
+  BusLiveOut,
+  BusOut,
+  HealthOut,
+  MyAssignmentOut,
+  MyStopBusesOut,
+  MeOut,
+  RouteDetailOut,
+  RouteSummaryOut,
+  SimStatusOut,
+  StopBusOut,
+  StopOut,
+  StopServiceOut,
+  TokenOut,
+} from "../api/types";
+
+export const me: MeOut = {
+  id: "U-T1",
+  role: "student",
+  name: "Test Student",
+  email: "t1@example.test",
+};
+
+export const token: TokenOut = {
+  access_token: "mock.test.token",
+  token_type: "bearer",
+  expires_at: "2099-01-01T00:00:00Z",
+  user: me,
+};
+
+export const health: HealthOut = {
+  status: "ok",
+  app: "CampusRide",
+  env: "test",
+  db: "ok",
+  clock: {
+    mode: "sim",
+    now: "2030-01-07T01:45:00Z",
+    local_now: "2030-01-07T07:15:00+05:30",
+    speed: 5,
+    paused: true,
+  },
+};
+
+const pt = (lng: number, lat: number) => ({
+  type: "Point" as const,
+  coordinates: [lng, lat] as [number, number],
+});
+
+export const stops: StopOut[] = [
+  {
+    id: "X0",
+    name: "Test Campus",
+    location: pt(10.0, 1.0),
+    walk_radius_m: 600,
+    is_campus_terminal: true,
+  },
+  {
+    id: "X1",
+    name: "Test Stop A",
+    location: pt(10.1, 1.1),
+    walk_radius_m: 400,
+    is_campus_terminal: false,
+  },
+  {
+    id: "X2",
+    name: "Test Stop B",
+    location: pt(10.2, 1.2),
+    walk_radius_m: 400,
+    is_campus_terminal: false,
+  },
+  {
+    id: "X3",
+    name: "Test Stop C",
+    location: pt(10.3, 1.3),
+    walk_radius_m: 400,
+    is_campus_terminal: false,
+  },
+];
+
+function detail(id: string, name: string, color: string, stopIds: string[]): RouteDetailOut {
+  const byId = new Map(stops.map((s) => [s.id, s]));
+  const mk = (ids: string[]) =>
+    ids.map((sid, seq) => ({
+      stop_id: sid,
+      name: byId.get(sid)!.name,
+      location: byId.get(sid)!.location,
+      seq,
+      distance_along_m: seq * 5000,
+      scheduled_offset_s: seq * 300,
+      dwell_s: 30,
+    }));
+  return {
+    id,
+    name,
+    color,
+    length_m: (stopIds.length - 1) * 1000,
+    path: {
+      type: "LineString",
+      coordinates: stopIds.map((s) => byId.get(s)!.location.coordinates),
+    },
+    directions: [
+      { variant_id: id, direction: "to_campus", label: `${id} — To Campus`, stops: mk(stopIds) },
+      {
+        variant_id: `${id}-E`,
+        direction: "from_campus",
+        label: `${id}-E — From Campus`,
+        stops: mk([...stopIds].reverse()),
+      },
+    ],
+  };
+}
+
+// X2 is shared by both test routes; X0 is the campus terminal.
+export const routeDetails: RouteDetailOut[] = [
+  detail("T1", "Test Line One", "#aa0000", ["X1", "X2", "X0"]),
+  detail("T2", "Test Line Two", "#0000aa", ["X3", "X2", "X0"]),
+];
+
+export const routeSummaries: RouteSummaryOut[] = routeDetails.map((r) => ({
+  id: r.id,
+  name: r.name,
+  color: r.color,
+  length_m: r.length_m,
+  directions: r.directions.map((d) => ({
+    variant_id: d.variant_id,
+    direction: d.direction,
+    label: d.label,
+    stop_count: d.stops.length,
+    first_stop_id: d.stops[0]!.stop_id,
+    last_stop_id: d.stops[d.stops.length - 1]!.stop_id,
+  })),
+}));
+
+export function servicesAt(stopId: string): StopServiceOut[] {
+  return routeDetails.flatMap((r) =>
+    r.directions.flatMap((d) =>
+      d.stops
+        .filter((s) => s.stop_id === stopId)
+        .map((s) => ({
+          route_id: r.id,
+          variant_id: d.variant_id,
+          direction: d.direction,
+          label: d.label,
+          color: r.color,
+          seq: s.seq,
+          distance_along_m: s.distance_along_m,
+          scheduled_offset_s: s.scheduled_offset_s,
+        })),
+    ),
+  );
+}
+
+/** Fake college assignment: bus "BX7" on T2 To Campus, boarding at the shared stop X2. */
+export const assignment: MyAssignmentOut = {
+  student_id: me.id,
+  status: "assigned",
+  assignment: {
+    bus: { id: "BX7", reg_no: "TEST 0007" },
+    route: {
+      route_id: "T2",
+      route_direction_id: "T2",
+      direction: "to_campus",
+      label: "T2 — To Campus",
+      name: "Test Line Two",
+      color: "#0000aa",
+    },
+    boarding_stop: {
+      stop_id: "X2",
+      name: "Test Stop B",
+      location: stops[2]!.location,
+      seq: 1,
+      stop_count: 3,
+      scheduled_offset_s: 300,
+    },
+    assigned_at: "2030-01-01T00:00:00Z",
+  },
+};
+
+export const unassigned: MyAssignmentOut = {
+  student_id: me.id,
+  status: "unassigned",
+  assignment: null,
+};
+
+/** A backend-shaped `live` object (as tracking would derive it). */
+export function live(
+  routeDirectionId: string,
+  distanceAlong: number,
+  overrides: Partial<BusLiveOut> = {},
+): BusLiveOut {
+  const routeId = routeDirectionId.replace(/-E$/, "");
+  const route = routeDetails.find((r) => r.id === routeId)!;
+  const dir = route.directions.find((d) => d.variant_id === routeDirectionId)!;
+  const after = dir.stops.filter((s) => s.distance_along_m <= distanceAlong);
+  const next = dir.stops.find((s) => s.distance_along_m > distanceAlong);
+  const frac = Math.min(1, distanceAlong / 10_000);
+  const [a, b] = [
+    route.path.coordinates[0]!,
+    route.path.coordinates[route.path.coordinates.length - 1]!,
+  ];
+  return {
+    trip_id: `T-TEST-${routeDirectionId}`,
+    route_id: routeId,
+    route_direction_id: routeDirectionId,
+    direction: dir.direction,
+    location: {
+      type: "Point",
+      coordinates: [a[0] + frac * (b[0] - a[0]), a[1] + frac * (b[1] - a[1])],
+    },
+    speed_mps: 8,
+    heading_deg: 200,
+    status: "en_route",
+    schedule_status: "on_time",
+    delay_s: 30,
+    current_stop_id: after[after.length - 1]?.stop_id ?? null,
+    next_stop_id: next?.stop_id ?? null,
+    route_progress: frac,
+    distance_along_m: distanceAlong,
+    occupancy: 20,
+    last_updated: "2030-01-07T01:50:00Z",
+    stale: false,
+    ...overrides,
+  };
+}
+
+/**
+ * Fake fleet: BX7 (the assigned bus) and BX9 run T2, BX8 runs T1 — both routes
+ * serve the boarding stop X2 (at 5 km on each route, to campus).
+ */
+export const buses: BusOut[] = [
+  {
+    id: "BX7",
+    reg_no: "TEST 0007",
+    capacity: 50,
+    route_id: "T2",
+    status: "active",
+    source: "sim",
+    live: live("T2", 1800),
+  },
+  {
+    id: "BX8",
+    reg_no: "TEST 0008",
+    capacity: 40,
+    route_id: "T1",
+    status: "active",
+    source: "sim",
+    live: live("T1", 4200, { occupancy: 37 }),
+  },
+  {
+    id: "BX9",
+    reg_no: "TEST 0009",
+    capacity: 50,
+    route_id: "T2",
+    status: "active",
+    source: "sim",
+    live: live("T2", 0, { status: "at_depot", speed_mps: 0 }),
+  },
+];
+
+export const simStatus: SimStatusOut = {
+  enabled: true,
+  running: true,
+  paused: false,
+  speed: 5,
+  allowed_speeds: [1, 2, 5, 10, 20],
+  sim_time: "2030-01-07T01:50:00Z",
+  local_time: "2030-01-07T07:20:00+05:30",
+  start_time: "2030-01-07T01:45:00Z",
+  service_date: "2030-01-07",
+  buses: 3,
+  telemetry_interval_s: 5,
+  controls_allowed: true,
+};
+
+/**
+ * A FAKE backend matching result (`StopBusOut`) for a fleet bus relative to
+ * `stopId` — hand-specified like the backend would return it. The frontend
+ * never computes these values itself.
+ */
+export function stopBus(
+  busId: string,
+  match: Partial<NonNullable<StopBusOut["match"]>> | null,
+  overrides: Partial<StopBusOut> = {},
+): StopBusOut {
+  const bus = buses.find((b) => b.id === busId)!;
+  const l = bus.live!;
+  const route = routeDetails.find((r) => r.id === l.route_id)!;
+  const dir = route.directions.find((d) => d.variant_id === l.route_direction_id)!;
+  const ref = (id: string | null) => {
+    const s = dir.stops.find((x) => x.stop_id === id);
+    return s ? { id: s.stop_id, name: s.name, seq: s.seq } : null;
+  };
+  const current = ref(l.current_stop_id)!;
+  return {
+    bus_id: bus.id,
+    bus_number: bus.id,
+    reg_no: bus.reg_no,
+    capacity: bus.capacity,
+    route_id: route.id,
+    route_direction_id: dir.variant_id,
+    route_name: route.name,
+    direction: dir.direction,
+    direction_label: dir.label,
+    status: l.status,
+    schedule_status: l.schedule_status,
+    delay_s: l.delay_s,
+    location: l.location,
+    speed_mps: l.speed_mps,
+    heading_deg: l.heading_deg,
+    route_progress: l.route_progress,
+    occupancy: l.occupancy,
+    last_updated: l.last_updated,
+    stale: false,
+    position: {
+      current_stop: current,
+      previous_stop: current.seq > 0 ? ref(dir.stops[current.seq - 1]!.stop_id) : null,
+      next_stop: ref(l.next_stop_id),
+      at_stop: l.status === "dwelling" || l.status === "at_depot",
+      distance_to_next_stop_m: 1000,
+    },
+    match:
+      match === null
+        ? null
+        : {
+            stop_id: "X2",
+            proximity: "far_from_stop",
+            position: "ahead",
+            distance_to_stop_m: 3200,
+            stop_offset_m: 3200,
+            stops_away: 1,
+            progress_to_stop: 0.36,
+            dwelling_at_stop: false,
+            ...match,
+          },
+    is_assigned_bus: busId === "BX7",
+    ...overrides,
+  };
+}
+
+/** Fake `GET /students/me/stop/buses`: BX7 is mine; BX8 (T1) and BX9 (T2) also serve X2 to campus. */
+export const myStopBuses: MyStopBusesOut = {
+  student_id: me.id,
+  status: "assigned",
+  boarding_stop: { id: "X2", name: "Test Stop B" },
+  assigned_bus_id: "BX7",
+  route_direction_id: "T2",
+  direction: "to_campus",
+  my_bus: stopBus("BX7", { distance_to_stop_m: 3200, stop_offset_m: 3200, stops_away: 1 }),
+  my_bus_serving_stop: true,
+  other_buses: [
+    stopBus("BX8", {
+      proximity: "approaching_stop",
+      distance_to_stop_m: 800,
+      stop_offset_m: 800,
+      stops_away: 1,
+    }),
+    stopBus("BX9", { distance_to_stop_m: 5000, stop_offset_m: 5000, stops_away: 1 }),
+  ],
+};
+
+export const myStopUnassigned: MyStopBusesOut = {
+  student_id: me.id,
+  status: "unassigned",
+  boarding_stop: null,
+  assigned_bus_id: null,
+  route_direction_id: null,
+  direction: null,
+  my_bus: null,
+  my_bus_serving_stop: false,
+  other_buses: [],
+};
+
+export const COMPUTED_AT = "2030-01-07T01:50:00Z"; // sim time of the fake predictions
+
+/** A FAKE backend ETA prediction (as `EtaPredictionOut`); minutes are whole. */
+export function eta(
+  minutes: number | null,
+  over: Partial<EtaPredictionOut> = {},
+): EtaPredictionOut {
+  const secs = minutes === null ? null : minutes * 60;
+  return {
+    status: minutes === null ? "passed" : "predicted",
+    eta_minutes: minutes,
+    eta_seconds: secs,
+    estimated_arrival_time:
+      secs === null ? null : new Date(Date.parse(COMPUTED_AT) + secs * 1000).toISOString(),
+    computed_at: COMPUTED_AT,
+    confidence: "high",
+    traffic: "Moderate",
+    traffic_factor: 1.36,
+    delay_factor: 1.0,
+    breakdown: {
+      travel_s: secs ?? 0,
+      dwell_s: 0,
+      wait_s: 0,
+      timetable_s: secs,
+      history_source: "timetable",
+    },
+    ...over,
+  };
+}
+
+export function arrival(
+  busId: string,
+  match: Parameters<typeof stopBus>[1],
+  prediction: EtaPredictionOut,
+  overrides: Partial<StopBusOut> = {},
+): ArrivalOut {
+  return { ...stopBus(busId, match, overrides), eta: prediction };
+}
+
+/** Fake `GET /students/me/arrivals`, ordered by backend ETA: BX8 (2 min), BX7 = mine (7), BX9 (14). */
+export const myArrivals: MyArrivalsOut = {
+  student_id: me.id,
+  status: "assigned",
+  boarding_stop: { id: "X2", name: "Test Stop B" },
+  assigned_bus_id: "BX7",
+  route_direction_id: "T2",
+  direction: "to_campus",
+  my_bus: arrival("BX7", { distance_to_stop_m: 3200, stop_offset_m: 3200, stops_away: 1 }, eta(7)),
+  my_bus_serving_stop: true,
+  arrivals: [
+    arrival(
+      "BX8",
+      { proximity: "approaching_stop", distance_to_stop_m: 800, stop_offset_m: 800, stops_away: 1 },
+      eta(2, { traffic: "Low", confidence: "medium" }),
+    ),
+    arrival("BX7", { distance_to_stop_m: 3200, stop_offset_m: 3200, stops_away: 1 }, eta(7)),
+    arrival(
+      "BX9",
+      { distance_to_stop_m: 5000, stop_offset_m: 5000, stops_away: 1 },
+      eta(14, { confidence: "low" }),
+    ),
+  ],
+};
+
+export const myArrivalsUnassigned: MyArrivalsOut = {
+  student_id: me.id,
+  status: "unassigned",
+  boarding_stop: null,
+  assigned_bus_id: null,
+  route_direction_id: null,
+  direction: null,
+  my_bus: null,
+  my_bus_serving_stop: false,
+  arrivals: [],
+};
+
+/** A FAKE backend comparison option: an arrival + the backend's comparison fields. */
+export function option(a: ArrivalOut, over: Partial<BusOptionOut> = {}): BusOptionOut {
+  return {
+    ...a,
+    occupancy_percentage: Math.round((100 * a.occupancy) / a.capacity),
+    seats_available: Math.max(a.capacity - a.occupancy, 0),
+    crowding: "Low",
+    delay_minutes: Math.round(a.delay_s / 60),
+    comparable: true,
+    indicators: [],
+    trade_off: null,
+    ...over,
+  };
+}
+
+/**
+ * Fake `GET /students/me/bus-options` — the trade-off the backend decided:
+ * BX8 is soonest but crowded, my BX7 is the best alternative, BX9 is emptiest.
+ */
+export const myBusOptions: BusOptionsOut = {
+  student_id: me.id,
+  status: "assigned",
+  boarding_stop: { id: "X2", name: "Test Stop B" },
+  assigned_bus_id: "BX7",
+  route_direction_id: "T2",
+  direction: "to_campus",
+  assigned_bus_available: true,
+  assigned_bus_note: null,
+  computed_at: COMPUTED_AT,
+  options: [
+    option(myArrivals.arrivals[0]!, {
+      occupancy: 46,
+      capacity: 50,
+      delay_minutes: 0,
+      occupancy_percentage: 92,
+      seats_available: 4,
+      crowding: "High",
+      indicators: ["FASTEST"],
+    }),
+    option(
+      { ...myArrivals.arrivals[1]!, is_assigned_bus: true, delay_s: 120 },
+      {
+        occupancy: 24,
+        occupancy_percentage: 48,
+        seats_available: 26,
+        crowding: "Low",
+        delay_minutes: 2,
+        indicators: ["ASSIGNED", "BEST_ALTERNATIVE"],
+        trade_off: "+5 min vs BX8 · 22 more seats free",
+      },
+    ),
+    option(myArrivals.arrivals[2]!, {
+      occupancy: 9,
+      occupancy_percentage: 18,
+      seats_available: 41,
+      crowding: "Low",
+      indicators: ["LEAST_CROWDED"],
+      trade_off: "+12 min vs BX8 · 37 more seats free",
+    }),
+  ],
+  excluded: [{ bus_id: "BX6", bus_number: "BX6", reason: "passed_stop" }],
+};
+
+export const myBusOptionsUnassigned: BusOptionsOut = {
+  student_id: me.id,
+  status: "unassigned",
+  boarding_stop: null,
+  assigned_bus_id: null,
+  route_direction_id: null,
+  direction: null,
+  assigned_bus_available: false,
+  assigned_bus_note: null,
+  computed_at: null,
+  options: [],
+  excluded: [],
+};

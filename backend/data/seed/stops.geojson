@@ -1,0 +1,669 @@
+{
+ "type": "FeatureCollection",
+ "attribution": "Road geometry © OpenStreetMap contributors (ODbL), routed with OSRM. Campus, stops and routes are fictional.",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.209209,
+     12.904978
+    ]
+   },
+   "properties": {
+    "id": "S00",
+    "name": "CampusRide Institute of Technology",
+    "campus_id": "C01",
+    "is_campus_terminal": true,
+    "walk_radius_m": 600
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.127515,
+     12.924899
+    ]
+   },
+   "properties": {
+    "id": "S01",
+    "name": "Tambaram Railway Station",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.133972,
+     12.922699
+    ]
+   },
+   "properties": {
+    "id": "S02",
+    "name": "Tambaram East",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.14747,
+     12.922655
+    ]
+   },
+   "properties": {
+    "id": "S03",
+    "name": "Camp Road Junction",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.155772,
+     12.923714
+    ]
+   },
+   "properties": {
+    "id": "S04",
+    "name": "Rajakilpakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.16295,
+     12.922534
+    ]
+   },
+   "properties": {
+    "id": "S05",
+    "name": "Gowrivakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.168284,
+     12.920825
+    ]
+   },
+   "properties": {
+    "id": "S06",
+    "name": "Sembakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.176338,
+     12.918546
+    ]
+   },
+   "properties": {
+    "id": "S07",
+    "name": "Santhosapuram",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.194,
+     12.917291
+    ]
+   },
+   "properties": {
+    "id": "S08",
+    "name": "Medavakkam Koot Road",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.220399,
+     12.9756
+    ]
+   },
+   "properties": {
+    "id": "S09",
+    "name": "Velachery Vijayanagar",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.218514,
+     12.969694
+    ]
+   },
+   "properties": {
+    "id": "S10",
+    "name": "Velachery Check Post",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.215506,
+     12.962183
+    ]
+   },
+   "properties": {
+    "id": "S11",
+    "name": "Baby Nagar",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.211191,
+     12.951203
+    ]
+   },
+   "properties": {
+    "id": "S12",
+    "name": "Pallikaranai",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.205056,
+     12.937985
+    ]
+   },
+   "properties": {
+    "id": "S13",
+    "name": "Kamakoti Nagar",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.198032,
+     12.927292
+    ]
+   },
+   "properties": {
+    "id": "S14",
+    "name": "Jalladianpet",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.146201,
+     12.951592
+    ]
+   },
+   "properties": {
+    "id": "S15",
+    "name": "Chromepet",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.14325,
+     12.94409
+    ]
+   },
+   "properties": {
+    "id": "S16",
+    "name": "Hasthinapuram",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.144848,
+     12.93667
+    ]
+   },
+   "properties": {
+    "id": "S17",
+    "name": "Nehru Nagar",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.1483,
+     12.92981
+    ]
+   },
+   "properties": {
+    "id": "S18",
+    "name": "Chitlapakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.259368,
+     12.983
+    ]
+   },
+   "properties": {
+    "id": "S19",
+    "name": "Thiruvanmiyur Bus Terminus",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.252742,
+     12.9799
+    ]
+   },
+   "properties": {
+    "id": "S20",
+    "name": "Tidel Park",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.248973,
+     12.969011
+    ]
+   },
+   "properties": {
+    "id": "S21",
+    "name": "Kandanchavadi",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.245429,
+     12.960745
+    ]
+   },
+   "properties": {
+    "id": "S22",
+    "name": "Perungudi",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.2412,
+     12.950237
+    ]
+   },
+   "properties": {
+    "id": "S23",
+    "name": "Seevaram",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.235719,
+     12.939592
+    ]
+   },
+   "properties": {
+    "id": "S24",
+    "name": "Thoraipakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.23056,
+     12.922647
+    ]
+   },
+   "properties": {
+    "id": "S25",
+    "name": "Karapakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.22889,
+     12.910599
+    ]
+   },
+   "properties": {
+    "id": "S26",
+    "name": "Kumaran Nagar",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.227922,
+     12.900986
+    ]
+   },
+   "properties": {
+    "id": "S27",
+    "name": "Sholinganallur Junction",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.212808,
+     13.007498
+    ]
+   },
+   "properties": {
+    "id": "S28",
+    "name": "Guindy",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.21328,
+     13.000828
+    ]
+   },
+   "properties": {
+    "id": "S29",
+    "name": "Five Furlong Road",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.219122,
+     12.99224
+    ]
+   },
+   "properties": {
+    "id": "S30",
+    "name": "Velachery Main Road",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.226991,
+     12.986137
+    ]
+   },
+   "properties": {
+    "id": "S31",
+    "name": "Gandhi Road",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.233958,
+     12.981413
+    ]
+   },
+   "properties": {
+    "id": "S32",
+    "name": "Taramani",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.244098,
+     12.981326
+    ]
+   },
+   "properties": {
+    "id": "S33",
+    "name": "Taramani Link Road",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.257333,
+     12.968168
+    ]
+   },
+   "properties": {
+    "id": "S34",
+    "name": "Kottivakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.255563,
+     12.958172
+    ]
+   },
+   "properties": {
+    "id": "S35",
+    "name": "Palavakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.254449,
+     12.948015
+    ]
+   },
+   "properties": {
+    "id": "S36",
+    "name": "Neelankarai",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.251074,
+     12.92289
+    ]
+   },
+   "properties": {
+    "id": "S37",
+    "name": "Injambakkam",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     80.24623,
+     12.897919
+    ]
+   },
+   "properties": {
+    "id": "S38",
+    "name": "Akkarai",
+    "campus_id": "C01",
+    "is_campus_terminal": false,
+    "walk_radius_m": 400
+   }
+  }
+ ]
+}

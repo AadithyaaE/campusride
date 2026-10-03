@@ -1,0 +1,12 @@
+[
+  {
+    "id": "U-A01",
+    "name": "Transport Office",
+    "email": "admin1@campusride.demo"
+  },
+  {
+    "id": "U-A02",
+    "name": "Fleet Supervisor",
+    "email": "admin2@campusride.demo"
+  }
+]

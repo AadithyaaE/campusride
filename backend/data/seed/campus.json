@@ -1,0 +1,11 @@
+{
+  "_comment": "Fictional campus placed on the real Chennai road network (Perumbakkam area).",
+  "id": "C01",
+  "name": "CampusRide Institute of Technology",
+  "short_name": "CRIT",
+  "location": [
+    80.20921,
+    12.90498
+  ],
+  "timezone": "Asia/Kolkata"
+}
