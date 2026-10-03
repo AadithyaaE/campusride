@@ -342,14 +342,56 @@ describe("Dashboard — live state from the backend", () => {
     expect(screen.queryByRole("region", { name: "Bus options" })).not.toBeInTheDocument();
   });
 
+  it("shows the BACKEND occupancy of my bus and refreshes it after a QR scan", async () => {
+    let scanned = false;
+    const mine = (occupancy: number, pct: number, seats: number) =>
+      json({
+        ...fx.myArrivals,
+        my_bus: fx.arrival(
+          "BX7",
+          { distance_to_stop_m: 3200, stop_offset_m: 3200, stops_away: 1 },
+          fx.eta(7),
+          // as reported by the backend — the dashboard never derives these
+          { occupancy, occupancy_percentage: pct, available_seats: seats },
+        ),
+      });
+    const { backend } = signedInApp({
+      "GET /api/v1/students/me/arrivals": () => (scanned ? mine(39, 78, 11) : mine(38, 76, 12)),
+      "POST /api/v1/boarding/scan": () => {
+        scanned = true;
+        return json(fx.scanResult());
+      },
+    });
+    const card = await screen.findByRole("region", { name: "My bus live" });
+    expect(within(card).getByLabelText("Live occupancy")).toHaveTextContent(
+      "38 / 50 passengers · 76% occupied · 12 seats available",
+    );
+    const qa = screen.getByRole("region", { name: "Quick actions" });
+    fireEvent.click(within(qa).getByRole("button", { name: /Scan Boarding QR/ }));
+    const dialog = screen.getByRole("dialog", { name: "Scan Boarding QR" });
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Simulate Scan" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Boarding recorded");
+    await flush();
+    expect(backend.calls).toContain("POST /api/v1/boarding/scan");
+    expect(
+      within(screen.getByRole("region", { name: "My bus live" })).getByLabelText("Live occupancy"),
+    ).toHaveTextContent("39 / 50 passengers · 78% occupied · 11 seats available");
+  });
+
   it("offers no way to change the assignment and never writes it anywhere", async () => {
     const { backend, storage } = signedInApp();
     const qa = await screen.findByRole("region", { name: "Quick actions" });
     expect(
       screen.queryByRole("button", { name: /change (stop|bus|route)/i }),
     ).not.toBeInTheDocument();
-    fireEvent.click(within(qa).getByRole("button", { name: /Scan boarding QR/ }));
-    expect(screen.getByRole("dialog", { name: "Scan boarding QR" })).toHaveTextContent("Phase 5");
+    fireEvent.click(within(qa).getByRole("button", { name: /Scan Boarding QR/ }));
+    const dialog = screen.getByRole("dialog", { name: "Scan Boarding QR" });
+    expect(
+      await within(dialog).findByRole("button", { name: "Simulate Scan" }),
+    ).toBeInTheDocument();
+    // the scanner offers no bus / stop / student picker
+    expect(within(dialog).queryByRole("combobox")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("textbox")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     await pollOnce();
     await flush();

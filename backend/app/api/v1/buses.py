@@ -16,8 +16,10 @@ from app.core.clock import Clock
 from app.core.errors import NotFoundError
 from app.deps import Container, CurrentPrincipal
 from app.models import Bus, BusState, GeoPoint
+from app.models.api.boarding import OccupancyOut
 from app.models.api.eta import BusEtaOut, EtaPredictionOut
 from app.models.common import BusSource, BusStatus, Direction, FleetStatus
+from app.services.capacity import available_seats, occupancy_percentage_display
 from app.services.tracking import is_delayed
 
 router = APIRouter(tags=["buses"])
@@ -39,11 +41,16 @@ class BusLiveOut(BaseModel):
     route_progress: float
     distance_along_m: float
     occupancy: int
+    available_seats: int | None
+    """``max(capacity − occupancy, 0)`` — null when the capacity isn't known here."""
+    occupancy_percentage: int | None
+    boarded_count: int
+    """QR boardings on the current trip (included in ``occupancy``)."""
     last_updated: datetime
     stale: bool
 
     @classmethod
-    def of(cls, s: BusState, clock: Clock, stale_after_s: float) -> BusLiveOut:
+    def of(cls, s: BusState, clock: Clock, stale_after_s: float, capacity: int | None = None) -> BusLiveOut:
         return cls(
             trip_id=s.trip_id,
             route_id=s.route_id,
@@ -60,6 +67,11 @@ class BusLiveOut(BaseModel):
             route_progress=s.route_progress,
             distance_along_m=s.distance_along_m,
             occupancy=s.occupancy,
+            available_seats=None if capacity is None else available_seats(s.occupancy, capacity),
+            occupancy_percentage=(
+                None if capacity is None else occupancy_percentage_display(s.occupancy, capacity)
+            ),
+            boarded_count=s.boarded_count,
             last_updated=s.ts,
             stale=(clock.now() - s.last_seen).total_seconds() > stale_after_s,
         )
@@ -98,7 +110,7 @@ def _bus_out(b: Bus, state: BusState | None, c) -> dict:
         "route_id": b.default_route_id,
         "status": b.status,
         "source": b.source,
-        "live": BusLiveOut.of(state, c.clock, c.settings.bus_stale_after_s) if state else None,
+        "live": (BusLiveOut.of(state, c.clock, c.settings.bus_stale_after_s, b.capacity) if state else None),
     }
 
 
@@ -161,3 +173,9 @@ async def bus_eta(
         stops_away=m.stops_away,
         delay_s=sb.state.delay_s,
     )
+
+
+@router.get("/buses/{bus_id}/occupancy", response_model=OccupancyOut)
+async def bus_occupancy(bus_id: str, _: CurrentPrincipal, c: Container) -> OccupancyOut:
+    """Live occupancy = min(capacity, synthetic baseline + QR boardings on the current trip)."""
+    return OccupancyOut.of(await c.boarding().occupancy(bus_id))

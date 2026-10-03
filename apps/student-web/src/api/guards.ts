@@ -13,6 +13,11 @@ import type {
   BusOptionOut,
   BusOptionsOut,
   CommuteDecisionOut,
+  BoardingEventOut,
+  BoardingScanOut,
+  MyBoardingOut,
+  OccupancyOut,
+  TripBoardingOut,
   EtaPredictionOut,
   MyArrivalsOut,
   StopArrivalsOut,
@@ -291,3 +296,47 @@ export const isCommuteDecision: Guard<CommuteDecisionOut> = (v): v is CommuteDec
     (isObj(v.student_location) && v.student_location.source === "synthetic")) &&
   ((v.status === "assigned" && DECISIONS.includes(String(v.decision)) && isStr(v.reason)) ||
     (v.status === "unassigned" && v.decision === null));
+
+const isInt = (v: unknown): v is number => isNum(v) && Number.isInteger(v);
+const OCC_SOURCES = ["synthetic_baseline+qr", "qr", "no_live_data"];
+
+export const isOccupancy: Guard<OccupancyOut> = (v): v is OccupancyOut =>
+  isObj(v) &&
+  isStr(v.bus_id) &&
+  (v.trip_id === null || isStr(v.trip_id)) &&
+  isInt(v.occupancy) &&
+  isInt(v.capacity) &&
+  isInt(v.available_seats) &&
+  isIntOrNull(v.occupancy_percentage) &&
+  isInt(v.boarded) &&
+  OCC_SOURCES.includes(String(v.source));
+
+export const isBoardingEvent: Guard<BoardingEventOut> = (v): v is BoardingEventOut =>
+  isObj(v) &&
+  isStr(v.boarding_id) &&
+  isStr(v.bus_id) &&
+  isStr(v.trip_id) &&
+  isStr(v.stop_id) &&
+  isStr(v.timestamp);
+
+export const isBoardingScan: Guard<BoardingScanOut> = (v): v is BoardingScanOut =>
+  isOccupancy(v) &&
+  ["boarded", "already_boarded"].includes(String((v as Obj).status)) &&
+  isStr((v as Obj).boarding_id) &&
+  isStr((v as Obj).message);
+
+export const isTripBoarding: Guard<TripBoardingOut> = (v): v is TripBoardingOut =>
+  isObj(v) &&
+  isStr(v.trip_id) &&
+  isInt(v.total_boarded) &&
+  ["all", "own", "count_only"].includes(String(v.visibility)) &&
+  arrayOf(isBoardingEvent)(v.events);
+
+export const isMyBoarding: Guard<MyBoardingOut> = (v): v is MyBoardingOut =>
+  isObj(v) &&
+  isStr(v.student_id) &&
+  isBool(v.ready) &&
+  (v.boarded === null || isBoardingEvent(v.boarded)) &&
+  (v.occupancy === null || isOccupancy(v.occupancy)) &&
+  ((v.status === "assigned" && isStr(v.bus_id) && isObj(v.boarding_stop)) ||
+    (v.status === "unassigned" && v.bus_id === null && v.trip_id === null));

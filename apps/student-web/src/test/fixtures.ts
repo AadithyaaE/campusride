@@ -8,6 +8,9 @@ import type {
   BusOptionOut,
   BusOptionsOut,
   CommuteDecisionOut,
+  BoardingScanOut,
+  MyBoardingOut,
+  OccupancyOut,
   EtaPredictionOut,
   MyArrivalsOut,
   BusLiveOut,
@@ -229,6 +232,10 @@ export function live(
     route_progress: frac,
     distance_along_m: distanceAlong,
     occupancy: 20,
+    // as the BACKEND reports them (services/capacity.py) — never derived in the browser
+    available_seats: 30,
+    occupancy_percentage: 40,
+    boarded_count: 0,
     last_updated: "2030-01-07T01:50:00Z",
     stale: false,
     ...overrides,
@@ -303,6 +310,8 @@ export function stopBus(
     return s ? { id: s.stop_id, name: s.name, seq: s.seq } : null;
   };
   const current = ref(l.current_stop_id)!;
+  // what the backend's capacity rules would report for this fake bus
+  const occupancy = overrides.occupancy ?? l.occupancy;
   return {
     bus_id: bus.id,
     bus_number: bus.id,
@@ -320,7 +329,9 @@ export function stopBus(
     speed_mps: l.speed_mps,
     heading_deg: l.heading_deg,
     route_progress: l.route_progress,
-    occupancy: l.occupancy,
+    occupancy,
+    available_seats: Math.max(bus.capacity - occupancy, 0),
+    occupancy_percentage: Math.round((100 * occupancy) / bus.capacity),
     last_updated: l.last_updated,
     stale: false,
     position: {
@@ -600,3 +611,50 @@ export const myCommuteUnassigned: CommuteDecisionOut = commute({
   eta: null,
   alternatives_available: 0,
 });
+
+/** Fake backend occupancy for the assigned bus BX7 (38 / 50 → 76 %, 12 seats). */
+export function occupancy(over: Partial<OccupancyOut> = {}): OccupancyOut {
+  return {
+    bus_id: "BX7",
+    trip_id: "T-TEST-T2",
+    occupancy: 38,
+    capacity: 50,
+    available_seats: 12,
+    occupancy_percentage: 76,
+    baseline: 38,
+    boarded: 0,
+    source: "synthetic_baseline+qr",
+    updated_at: "2030-01-07T01:50:00Z",
+    ...over,
+  };
+}
+
+/** Fake `GET /students/me/boarding`: assigned BX7, trip running, ready to scan. */
+export const myBoarding: MyBoardingOut = {
+  student_id: me.id,
+  status: "assigned",
+  bus_id: "BX7",
+  bus_number: "BX7",
+  route_direction_id: "T2",
+  boarding_stop: { id: "X2", name: "Test Stop B" },
+  trip_id: "T-TEST-T2",
+  ready: true,
+  reason_code: null,
+  reason: null,
+  boarded: null,
+  occupancy: occupancy(),
+};
+
+/** Fake `POST /boarding/scan` result (the backend's numbers after one boarding). */
+export function scanResult(over: Partial<BoardingScanOut> = {}): BoardingScanOut {
+  return {
+    ...occupancy({ occupancy: 39, available_seats: 11, occupancy_percentage: 78, boarded: 1 }),
+    status: "boarded",
+    boarding_id: "BRD-T-TEST-T2-" + me.id,
+    student_id: me.id,
+    stop_id: "X2",
+    timestamp: "2030-01-07T01:50:00Z",
+    message: "Boarding recorded.",
+    ...over,
+  };
+}

@@ -21,6 +21,7 @@ from app.core.errors import AuthError, ForbiddenError
 from app.core.events import EventBus
 from app.models.common import Role
 from app.repositories import Repositories
+from app.services.boarding_service import BoardingService
 from app.services.bus_comparison_service import BusComparisonService
 from app.services.bus_simulator import BusSimulator
 from app.services.commute_decision_service import CommuteDecisionService
@@ -47,6 +48,7 @@ class AppContainer:
     eta_service: EtaService | None = None
     comparison_service: BusComparisonService | None = None
     commute_service: CommuteDecisionService | None = None
+    boarding_service: BoardingService | None = None
 
     def matching(self) -> MatchingService:
         """Stop ↔ bus matching (caches static route data for the app's lifetime)."""
@@ -77,6 +79,14 @@ class AppContainer:
                 StudentLocationSource(self.settings),
             )
         return self.commute_service
+
+    def boarding(self) -> BoardingService:
+        """QR boarding + live occupancy; shares the ONE ingest service (occupancy writes)."""
+        if self.boarding_service is None:
+            self.boarding_service = BoardingService(
+                self.repos, self.clock, self.events, self.matching(), self.telemetry_ingest()
+            )
+        return self.boarding_service
 
     def telemetry_ingest(self) -> TelemetryIngestService:
         if self.ingest is None:

@@ -11,6 +11,7 @@ from app.core.auth import Principal
 from app.core.errors import ForbiddenError, NotFoundError
 from app.deps import Container, CurrentPrincipal, Repos, require_role
 from app.models import GeoPoint
+from app.models.api.boarding import BoardingEventOut, MyBoardingOut, OccupancyOut
 from app.models.api.commute import CommuteDecisionOut, StudentLocationOut
 from app.models.api.comparison import BusOptionOut, BusOptionsOut, ExcludedBusOut
 from app.models.api.eta import ArrivalOut, EtaPredictionOut, MyArrivalsOut
@@ -164,7 +165,6 @@ async def _bus_options(c: Container, student_id: str) -> BusOptionsOut:
         return BusOptionOut(
             **base.model_dump(),
             eta=EtaPredictionOut.of(o.prediction),
-            occupancy_percentage=o.occupancy_percentage,
             seats_available=o.seats_available,
             crowding=o.crowding,
             delay_minutes=o.delay_minutes,
@@ -306,3 +306,45 @@ async def student_commute_decision(
     """Same decision for a given student: the student themself, or an admin."""
     await _authorize_student_view(principal, c, student_id)
     return _commute_out(c, student_id, await c.commute().for_student(student_id))
+
+
+# --------------------------------------------------------------------------- Feature 8
+
+
+@router.get("/students/me/boarding", response_model=MyBoardingOut)
+async def my_boarding(principal: Student, c: Container) -> MyBoardingOut:
+    """Scanner screen state: assigned bus + its current trip, readiness, boarding, occupancy.
+
+    Read-only and assignment-derived — the student cannot pick a bus, trip or stop.
+    """
+    sb = await c.boarding().for_student(principal.user_id)
+    if sb is None:
+        return MyBoardingOut(
+            student_id=principal.user_id,
+            status="unassigned",
+            bus_id=None,
+            bus_number=None,
+            route_direction_id=None,
+            boarding_stop=None,
+            trip_id=None,
+            ready=False,
+            reason_code="unassigned",
+            reason="Your bus assignment is not available yet.",
+            boarded=None,
+            occupancy=None,
+        )
+    a = sb.assignment
+    return MyBoardingOut(
+        student_id=principal.user_id,
+        status="assigned",
+        bus_id=a.bus.id,
+        bus_number=a.bus.id,
+        route_direction_id=a.direction.variant_id,
+        boarding_stop=StopSummaryOut(id=a.boarding_stop.id, name=a.boarding_stop.name),
+        trip_id=sb.trip_id,
+        ready=sb.ready,
+        reason_code=sb.reason_code,
+        reason=sb.reason,
+        boarded=BoardingEventOut.of(sb.boarded) if sb.boarded else None,
+        occupancy=OccupancyOut.of(sb.occupancy),
+    )

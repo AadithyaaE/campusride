@@ -179,6 +179,7 @@ class BusSimulator:
         for bus_id in sim_ids:
             await repos.bus_states.delete(bus_id)
         await repos.telemetry.delete_for_buses(sim_ids)
+        await repos.boarding_events.delete_for_buses(sim_ids)  # trips replay from the start
         self._ingest.forget_caches()
 
         drivers = {d.id: d for d in await repos.drivers.list()}

@@ -20,8 +20,6 @@ IndicatorOut = Literal["ASSIGNED", "FASTEST", "LEAST_CROWDED", "BEST_ALTERNATIVE
 
 
 class BusOptionOut(ArrivalOut):
-    occupancy_percentage: int | None
-    """Rounded ``occupancy / capacity × 100``; null when capacity is unknown."""
     seats_available: int
     crowding: Literal["Low", "Medium", "High", "Unknown"]
     """Bands: Low < 60 % ≤ Medium < 80 % ≤ High."""

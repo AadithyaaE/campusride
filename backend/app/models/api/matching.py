@@ -11,6 +11,7 @@ from app.core.clock import Clock
 from app.models import GeoPoint, Stop
 from app.models.common import BusStatus, Direction, StopProximity
 from app.models.route import RouteStop
+from app.services.capacity import available_seats, occupancy_percentage_display
 from app.services.matching import ServingBus
 from app.services.tracking import is_delayed
 
@@ -65,6 +66,9 @@ class StopBusOut(BaseModel):
     heading_deg: float | None
     route_progress: float
     occupancy: int
+    available_seats: int
+    occupancy_percentage: int | None
+    """Backend-computed (``services/capacity.py``); null when capacity is unknown."""
     last_updated: datetime
     stale: bool
     position: BusPositionOut
@@ -110,6 +114,8 @@ class StopBusOut(BaseModel):
             heading_deg=s.heading_deg,
             route_progress=s.route_progress,
             occupancy=s.occupancy,
+            available_seats=available_seats(s.occupancy, sb.bus.capacity),
+            occupancy_percentage=occupancy_percentage_display(s.occupancy, sb.bus.capacity),
             last_updated=s.ts,
             stale=(clock.now() - s.last_seen).total_seconds() > stale_after_s,
             position=BusPositionOut(

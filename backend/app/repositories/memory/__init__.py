@@ -176,6 +176,32 @@ class MemoryBoardingEventRepository(MemoryRepository[BoardingEvent]):
         events = await self.list(filter={"trip_id": trip_id}, limit=100_000)
         return sorted(events, key=lambda e: e.ts)
 
+    async def insert_once(self, event: BoardingEvent) -> bool:
+        # No await between the check and the write → atomic on the event loop
+        # (mirrors the unique (student_id, trip_id) index in MongoDB).
+        if event.id in self._docs:
+            return False
+        if event.student_id is not None and any(
+            d.get("student_id") == event.student_id and d.get("trip_id") == event.trip_id
+            for d in self._docs.values()
+        ):
+            return False
+        self._docs[event.id] = event.to_mongo()
+        return True
+
+    async def for_student_trip(self, student_id: str, trip_id: str) -> BoardingEvent | None:
+        found = await self.list(filter={"student_id": student_id, "trip_id": trip_id}, limit=1)
+        return found[0] if found else None
+
+    async def count_for_trip(self, trip_id: str) -> int:
+        return await self.count(filter={"trip_id": trip_id, "type": "board"})
+
+    async def delete_for_buses(self, bus_ids: Sequence[str]) -> int:
+        doomed = [k for k, d in self._docs.items() if d.get("bus_id") in set(bus_ids)]
+        for k in doomed:
+            del self._docs[k]
+        return len(doomed)
+
 
 class MemoryDeviationRepository(MemoryRepository[Deviation]):
     async def open_for_bus(self, bus_id: str) -> Deviation | None:

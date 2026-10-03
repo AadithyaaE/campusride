@@ -18,6 +18,10 @@ import {
   isBusEta,
   isBusOptions,
   isCommuteDecision,
+  isBoardingScan,
+  isMyBoarding,
+  isOccupancy,
+  isTripBoarding,
   isBusDetail,
   isMe,
   isMyArrivals,
@@ -38,6 +42,11 @@ import type {
   BusEtaOut,
   BusOptionsOut,
   CommuteDecisionOut,
+  BoardingScanRequest,
+  BoardingScanOut,
+  MyBoardingOut,
+  OccupancyOut,
+  TripBoardingOut,
   MyArrivalsOut,
   StopArrivalsOut,
   BusDetailOut,
@@ -227,6 +236,29 @@ export class ApiClient {
    */
   myCommuteDecision(): Promise<CommuteDecisionOut> {
     return this.request("/students/me/commute-decision", { guard: isCommuteDecision });
+  }
+
+  // ---- QR boarding + live occupancy (Feature 8) — the backend validates everything
+
+  /** Scanner screen state: assigned bus, its current trip, readiness, occupancy (read-only). */
+  myBoarding(): Promise<MyBoardingOut> {
+    return this.request("/students/me/boarding", { guard: isMyBoarding });
+  }
+
+  /**
+   * THE boarding endpoint — used by the simulated scanner now and a camera scanner later.
+   * Rejections come back as ApiError with a code (wrong_bus, trip_inactive, bus_full…).
+   */
+  scanBoarding(payload: BoardingScanRequest): Promise<BoardingScanOut> {
+    return this.request("/boarding/scan", { method: "POST", body: payload, guard: isBoardingScan });
+  }
+
+  busOccupancy(busId: string): Promise<OccupancyOut> {
+    return this.request(`/buses/${encodeURIComponent(busId)}/occupancy`, { guard: isOccupancy });
+  }
+
+  tripBoarding(tripId: string): Promise<TripBoardingOut> {
+    return this.request(`/trips/${encodeURIComponent(tripId)}/boarding`, { guard: isTripBoarding });
   }
 
   listStops(): Promise<StopOut[]> {

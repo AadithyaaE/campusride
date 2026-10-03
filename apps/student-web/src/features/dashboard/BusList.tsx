@@ -102,7 +102,11 @@ export function BusList({
                           ` · ${stopsAwayText(bus.match.stops_away)}`}
                       </span>
                     )}
-                    <OccupancyBar occupancy={bus.occupancy} capacity={bus.capacity} />
+                    <OccupancyBar
+                      occupancy={bus.occupancy}
+                      capacity={bus.capacity}
+                      percentage={bus.occupancy_percentage}
+                    />
                   </span>
                   <span className="bus-eta">
                     <EtaCountdown eta={bus.eta} simRef={simRef} />
@@ -132,7 +136,11 @@ export function BusList({
                     <StatusChip status={b.live!.status} /> <ScheduleChip bus={b.live!} />
                   </span>
                   <span className="row-sub">Next: {stopName(network, b.live!.next_stop_id)}</span>
-                  <OccupancyBar occupancy={b.live!.occupancy} capacity={b.capacity} />
+                  <OccupancyBar
+                    occupancy={b.live!.occupancy}
+                    capacity={b.capacity}
+                    percentage={b.live!.occupancy_percentage}
+                  />
                 </span>
               </div>
             </li>

@@ -257,6 +257,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/buses/{bus_id}/occupancy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Bus Occupancy
+     * @description Live occupancy = min(capacity, synthetic baseline + QR boardings on the current trip).
+     */
+    get: operations["bus_occupancy_api_v1_buses__bus_id__occupancy_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/driver/telemetry": {
     parameters: {
       query?: never;
@@ -513,6 +533,71 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/students/me/boarding": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My Boarding
+     * @description Scanner screen state: assigned bus + its current trip, readiness, boarding, occupancy.
+     *
+     *     Read-only and assignment-derived — the student cannot pick a bus, trip or stop.
+     */
+    get: operations["my_boarding_api_v1_students_me_boarding_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/boarding/scan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Scan
+     * @description Record a QR boarding for the signed-in student (PROTOTYPE: unsigned, simulated QR).
+     *
+     *     Validated against the college assignment and the bus's current trip. A repeat
+     *     scan returns ``already_boarded`` and changes nothing.
+     */
+    post: operations["scan_api_v1_boarding_scan_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/trips/{trip_id}/boarding": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Trip Boarding
+     * @description Boarding events of a trip. Admins: all; students: only their own; others: count only.
+     */
+    get: operations["trip_boarding_api_v1_trips__trip_id__boarding_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -556,6 +641,10 @@ export interface components {
       route_progress: number;
       /** Occupancy */
       occupancy: number;
+      /** Available Seats */
+      available_seats: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
       /**
        * Last Updated
        * Format: date-time
@@ -603,6 +692,92 @@ export interface components {
        * Format: date-time
        */
       assigned_at: string;
+    };
+    /** BoardingEventOut */
+    BoardingEventOut: {
+      /** Boarding Id */
+      boarding_id: string;
+      /** Student Id */
+      student_id: string | null;
+      /** Bus Id */
+      bus_id: string;
+      /** Trip Id */
+      trip_id: string;
+      /** Stop Id */
+      stop_id: string;
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Scanner */
+      scanner: ("simulated" | "camera") | null;
+    };
+    /** BoardingScanIn */
+    BoardingScanIn: {
+      /** Student Id */
+      student_id: string;
+      /** Bus Id */
+      bus_id: string;
+      /** Trip Id */
+      trip_id: string;
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Stop Id */
+      stop_id?: string | null;
+      /**
+       * Scanner
+       * @default simulated
+       * @enum {string}
+       */
+      scanner: "simulated" | "camera";
+    };
+    /** BoardingScanOut */
+    BoardingScanOut: {
+      /** Bus Id */
+      bus_id: string;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Occupancy */
+      occupancy: number;
+      /** Capacity */
+      capacity: number;
+      /** Available Seats */
+      available_seats: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
+      /** Baseline */
+      baseline: number;
+      /** Boarded */
+      boarded: number;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "synthetic_baseline+qr" | "qr" | "no_live_data";
+      /** Updated At */
+      updated_at: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "boarded" | "already_boarded";
+      /** Boarding Id */
+      boarding_id: string;
+      /** Student Id */
+      student_id: string;
+      /** Stop Id */
+      stop_id: string;
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Message */
+      message: string;
     };
     /** BoardingStopOut */
     BoardingStopOut: {
@@ -724,6 +899,12 @@ export interface components {
       distance_along_m: number;
       /** Occupancy */
       occupancy: number;
+      /** Available Seats */
+      available_seats: number | null;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
+      /** Boarded Count */
+      boarded_count: number;
       /**
        * Last Updated
        * Format: date-time
@@ -768,6 +949,10 @@ export interface components {
       route_progress: number;
       /** Occupancy */
       occupancy: number;
+      /** Available Seats */
+      available_seats: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
       /**
        * Last Updated
        * Format: date-time
@@ -783,8 +968,6 @@ export interface components {
        */
       is_assigned_bus: boolean;
       eta: components["schemas"]["EtaPredictionOut"];
-      /** Occupancy Percentage */
-      occupancy_percentage: number | null;
       /** Seats Available */
       seats_available: number;
       /**
@@ -1136,6 +1319,36 @@ export interface components {
       status: "assigned" | "unassigned";
       assignment: components["schemas"]["AssignmentOut"] | null;
     };
+    /**
+     * MyBoardingOut
+     * @description Scanner screen state for the signed-in student (assignment-derived, read-only).
+     */
+    MyBoardingOut: {
+      /** Student Id */
+      student_id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "assigned" | "unassigned";
+      /** Bus Id */
+      bus_id: string | null;
+      /** Bus Number */
+      bus_number: string | null;
+      /** Route Direction Id */
+      route_direction_id: string | null;
+      boarding_stop: components["schemas"]["StopSummaryOut"] | null;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Ready */
+      ready: boolean;
+      /** Reason Code */
+      reason_code: string | null;
+      /** Reason */
+      reason: string | null;
+      boarded: components["schemas"]["BoardingEventOut"] | null;
+      occupancy: components["schemas"]["OccupancyOut"] | null;
+    };
     /** MyStopBusesOut */
     MyStopBusesOut: {
       /** Student Id */
@@ -1170,6 +1383,32 @@ export interface components {
       is_campus_terminal: boolean;
       /** Distance M */
       distance_m: number;
+    };
+    /** OccupancyOut */
+    OccupancyOut: {
+      /** Bus Id */
+      bus_id: string;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Occupancy */
+      occupancy: number;
+      /** Capacity */
+      capacity: number;
+      /** Available Seats */
+      available_seats: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
+      /** Baseline */
+      baseline: number;
+      /** Boarded */
+      boarded: number;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: "synthetic_baseline+qr" | "qr" | "no_live_data";
+      /** Updated At */
+      updated_at: string | null;
     };
     /**
      * Role
@@ -1303,6 +1542,10 @@ export interface components {
       route_progress: number;
       /** Occupancy */
       occupancy: number;
+      /** Available Seats */
+      available_seats: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
       /**
        * Last Updated
        * Format: date-time
@@ -1455,6 +1698,24 @@ export interface components {
        */
       expires_at: string;
       user: components["schemas"]["MeOut"];
+    };
+    /** TripBoardingOut */
+    TripBoardingOut: {
+      /** Trip Id */
+      trip_id: string;
+      /** Bus Id */
+      bus_id: string;
+      /** Route Direction Id */
+      route_direction_id: string;
+      /** Total Boarded */
+      total_boarded: number;
+      /**
+       * Visibility
+       * @enum {string}
+       */
+      visibility: "all" | "own" | "count_only";
+      /** Events */
+      events: components["schemas"]["BoardingEventOut"][];
     };
     /** ValidationError */
     ValidationError: {
@@ -1885,6 +2146,37 @@ export interface operations {
       };
     };
   };
+  bus_occupancy_api_v1_buses__bus_id__occupancy_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bus_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OccupancyOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   post_telemetry_api_v1_driver_telemetry_post: {
     parameters: {
       query?: never;
@@ -2180,6 +2472,90 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CommuteDecisionOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  my_boarding_api_v1_students_me_boarding_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MyBoardingOut"];
+        };
+      };
+    };
+  };
+  scan_api_v1_boarding_scan_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BoardingScanIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BoardingScanOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  trip_boarding_api_v1_trips__trip_id__boarding_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        trip_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TripBoardingOut"];
         };
       };
       /** @description Validation Error */

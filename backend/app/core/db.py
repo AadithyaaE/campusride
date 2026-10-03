@@ -75,6 +75,12 @@ INDEXES: dict[str, list[IndexModel]] = {
     Collections.BOARDING_EVENTS: [
         IndexModel([("trip_id", ASCENDING), ("ts", ASCENDING)], name="trip_ts"),
         IndexModel([("bus_id", ASCENDING), ("ts", ASCENDING)], name="bus_ts"),
+        IndexModel(
+            [("student_id", ASCENDING), ("trip_id", ASCENDING)],
+            name="student_trip_unique",
+            unique=True,
+            partialFilterExpression={"student_id": {"$type": "string"}},
+        ),
     ],
     Collections.DEVIATIONS: [
         IndexModel([("bus_id", ASCENDING), ("started_at", DESCENDING)], name="bus_started"),

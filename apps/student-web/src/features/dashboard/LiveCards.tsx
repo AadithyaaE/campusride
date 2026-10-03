@@ -50,8 +50,17 @@ export function ScheduleChip({ bus }: { bus: { schedule_status: string; delay_s:
   );
 }
 
-export function OccupancyBar({ occupancy, capacity }: { occupancy: number; capacity: number }) {
-  const pct = capacity > 0 ? Math.round((100 * occupancy) / capacity) : 0;
+/** Display only: occupancy and the BACKEND's percentage (``services/capacity.py``). */
+export function OccupancyBar({
+  occupancy,
+  capacity,
+  percentage,
+}: {
+  occupancy: number;
+  capacity: number;
+  percentage: number | null;
+}) {
+  const pct = percentage ?? 0;
   const tone = pct >= 80 ? "high" : pct >= 60 ? "mid" : "low"; // backend crowding bands (F6)
   return (
     <span className="occ" aria-label={`Occupancy ${occupancy} of ${capacity}`}>
@@ -191,7 +200,18 @@ export function MyBusLiveCard({
             <div className="metric-wide">
               <dt>Occupancy</dt>
               <dd>
-                <OccupancyBar occupancy={bus.occupancy} capacity={bus.capacity} />
+                <OccupancyBar
+                  occupancy={bus.occupancy}
+                  capacity={bus.capacity}
+                  percentage={bus.occupancy_percentage}
+                />
+                <span className="occ-detail" aria-label="Live occupancy">
+                  {bus.occupancy} / {bus.capacity} passengers ·{" "}
+                  {bus.occupancy_percentage === null
+                    ? "—"
+                    : `${bus.occupancy_percentage}% occupied`}{" "}
+                  · {bus.available_seats} seat{bus.available_seats === 1 ? "" : "s"} available
+                </span>
               </dd>
             </div>
           </dl>

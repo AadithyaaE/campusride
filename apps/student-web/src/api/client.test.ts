@@ -248,6 +248,52 @@ describe("ApiClient", () => {
     expect(mine.my_bus?.bus_id).toBe("BX7");
   });
 
+  it("validates QR boarding and occupancy responses (Feature 8)", async () => {
+    const backend = fakeBackend({
+      "POST /api/v1/boarding/scan": () => json(fx.scanResult()),
+      "GET /api/v1/buses/BX7/occupancy": () => json(fx.occupancy()),
+      "GET /api/v1/trips/T-TEST-T2/boarding": () =>
+        json({
+          trip_id: "T-TEST-T2",
+          bus_id: "BX7",
+          route_direction_id: "T2",
+          total_boarded: 1,
+          visibility: "own",
+          events: [
+            {
+              boarding_id: "BRD-T-TEST-T2-" + fx.me.id,
+              student_id: fx.me.id,
+              bus_id: "BX7",
+              trip_id: "T-TEST-T2",
+              stop_id: "X2",
+              timestamp: "2030-01-07T01:50:00Z",
+              scanner: "simulated",
+            },
+          ],
+        }),
+    });
+    const api = makeClient(backend.fetchImpl);
+    const payload = {
+      student_id: fx.me.id,
+      bus_id: "BX7",
+      trip_id: "T-TEST-T2",
+      timestamp: "2030-01-07T01:50:00Z",
+    };
+    expect((await api.scanBoarding(payload)).status).toBe("boarded");
+    expect((await api.busOccupancy("BX7")).available_seats).toBe(12);
+    expect((await api.tripBoarding("T-TEST-T2")).total_boarded).toBe(1);
+    expect((await api.myBoarding()).trip_id).toBe("T-TEST-T2");
+    const fractional = makeClient(async () => json(fx.occupancy({ occupancy_percentage: 76.4 })));
+    await expect(fractional.busOccupancy("BX7")).rejects.toBeInstanceOf(MalformedResponseError);
+    const full = makeClient(async () =>
+      json({ error: { code: "bus_full", message: "Bus BX7 is full" } }, 409),
+    );
+    await expect(full.scanBoarding(payload)).rejects.toMatchObject({
+      status: 409,
+      code: "bus_full",
+    });
+  });
+
   it("validates the backend commute decision (Feature 7)", async () => {
     const ok = await makeClient(async () => json(fx.myCommute)).myCommuteDecision();
     expect(ok.decision).toBe("YES");

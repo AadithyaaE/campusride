@@ -860,3 +860,110 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ------------------------------------------------- QR boarding (F8) */
+
+.modal .btn + .btn,
+.modal .boarding + .btn {
+  margin-top: 10px;
+}
+.occ-detail {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.scanner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scanner-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 150px;
+  border-radius: 12px;
+  background: #0f172a;
+  border: 3px dashed #38bdf8;
+  overflow: hidden;
+}
+.scanner-qr {
+  font-size: 4.5rem;
+  color: #e2e8f0;
+}
+.scanner-line {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 50%;
+  height: 2px;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+}
+.scanner-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #92400e;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.scanner-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin: 0;
+}
+.scanner-facts dt {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.scanner-facts dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.scanner-status {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.scan-result {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.scan-result h3 {
+  margin: 0 0 6px;
+}
+.scan-result p {
+  margin: 0 0 6px;
+}
+.scan-ok {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.scan-dup {
+  background: var(--accent-soft);
+  border-color: #bae6fd;
+}
+.scan-bad {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.occ-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.occ-summary-bus {
+  font-size: 1.1rem;
+}
+
+.modal {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}

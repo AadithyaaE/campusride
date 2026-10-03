@@ -42,6 +42,17 @@ export type BusEtaOut = Schemas["BusEtaOut"];
 export type BusOptionOut = Schemas["BusOptionOut"];
 export type BusOptionsOut = Schemas["BusOptionsOut"];
 export type CommuteDecisionOut = Schemas["CommuteDecisionOut"];
+// ---- QR boarding + live occupancy (Feature 8)
+/** What a boarding QR carries (PROTOTYPE: unsigned, from a simulated scanner). */
+export type BoardingScanIn = Schemas["BoardingScanIn"];
+export type QrPayload = Pick<BoardingScanIn, "student_id" | "bus_id" | "trip_id" | "timestamp">;
+/** What `POST /boarding/scan` accepts: the QR payload + optional stop / scanner kind. */
+export type BoardingScanRequest = QrPayload & Partial<Pick<BoardingScanIn, "stop_id" | "scanner">>;
+export type BoardingScanOut = Schemas["BoardingScanOut"];
+export type BoardingEventOut = Schemas["BoardingEventOut"];
+export type OccupancyOut = Schemas["OccupancyOut"];
+export type TripBoardingOut = Schemas["TripBoardingOut"];
+export type MyBoardingOut = Schemas["MyBoardingOut"];
 /** Backend commute decision (Feature 7); YES / RISK / MISSED are the decisions. */
 export type CommuteDecision = NonNullable<CommuteDecisionOut["decision"]>;
 /** Backend comparison indicator (Feature 6). */

@@ -54,6 +54,8 @@ from app.core.clock import Clock
 from app.core.config import Settings
 from app.models.common import BusStatus
 from app.services.assignments import ResolvedAssignment
+from app.services.capacity import available_seats as seats_available
+from app.services.capacity import occupancy_percentage
 from app.services.eta_service import EtaPrediction, EtaService
 from app.services.matching import ServingBus
 from app.services.tracking import is_stale
@@ -96,13 +98,6 @@ INDICATOR_ORDER = (
 # =========================================================================== pure rules
 
 
-def occupancy_percentage(occupancy: int, capacity: int) -> float | None:
-    """``occupancy / capacity × 100``; None when capacity is unknown (0 or less)."""
-    if capacity <= 0:
-        return None
-    return 100.0 * max(occupancy, 0) / capacity
-
-
 def crowding_level(pct: float | None) -> Crowding:
     if pct is None:
         return "Unknown"
@@ -111,10 +106,6 @@ def crowding_level(pct: float | None) -> Crowding:
     if pct >= CROWDING_MEDIUM_FROM_PCT:
         return "Medium"
     return "Low"
-
-
-def seats_available(occupancy: int, capacity: int) -> int:
-    return max(capacity - max(occupancy, 0), 0)
 
 
 def delay_minutes(delay_s: int) -> int:

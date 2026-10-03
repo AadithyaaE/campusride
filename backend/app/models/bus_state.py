@@ -34,6 +34,11 @@ class BusState(Document):
     delay_s: int = 0
     """Seconds behind (+) or ahead of (−) the timetable at the current position."""
     occupancy: int = Field(default=0, ge=0)
+    """Live occupancy = min(capacity, baseline + boarded) — see ``services/capacity.py``."""
+    occupancy_baseline: int = Field(default=0, ge=0)
+    """Driver-reported headcount from telemetry (SYNTHETIC for simulated buses)."""
+    boarded_count: int = Field(default=0, ge=0)
+    """QR boarding events recorded for the current trip (counted, never incremented)."""
     status: BusStatus = BusStatus.SCHEDULED
     stale: bool = False
     """True when no telemetry has arrived for BUS_STALE_AFTER_S (e.g. GPS dropout)."""

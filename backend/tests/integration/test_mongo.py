@@ -169,3 +169,30 @@ async def test_simulator_on_mongo(repos: Repositories):
     await sim.reset()  # wipes synthetic telemetry/state and restarts
     assert len(await repos.telemetry.recent("B01", since=start)) == 1
     await sim.shutdown()
+
+
+async def test_boarding_unique_student_trip_index(repos: Repositories):
+    from app.models import BoardingEvent
+    from app.models.common import BoardingSource, BoardingType
+
+    def event(id_: str, student: str | None) -> BoardingEvent:
+        return BoardingEvent(
+            id=id_,
+            trip_id="T-X",
+            bus_id="B05",
+            stop_id="S27",
+            student_id=student,
+            ts=datetime(2026, 10, 5, 2, 0, tzinfo=UTC),
+            type=BoardingType.BOARD,
+            source=BoardingSource.QR,
+        )
+
+    assert await repos.boarding_events.insert_once(event("BRD-1", "U-S0001")) is True
+    assert await repos.boarding_events.insert_once(event("BRD-1", "U-S0001")) is False  # same id
+    assert await repos.boarding_events.insert_once(event("BRD-2", "U-S0001")) is False  # same student+trip
+    # anonymous (simulated) events are not constrained by the partial unique index
+    assert await repos.boarding_events.insert_once(event("SIM-1", None)) is True
+    assert await repos.boarding_events.insert_once(event("SIM-2", None)) is True
+    assert await repos.boarding_events.count_for_trip("T-X") == 3
+    assert (await repos.boarding_events.for_student_trip("U-S0001", "T-X")).id == "BRD-1"
+    assert await repos.boarding_events.delete_for_buses(["B05"]) == 3

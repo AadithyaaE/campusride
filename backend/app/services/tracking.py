@@ -17,6 +17,7 @@ time) — it never reads simulator internals:
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 
 from app.core.auth import Principal
@@ -37,6 +38,7 @@ from app.models.events import (
 from app.models.route import RouteDirection
 from app.models.telemetry_in import TelemetryBatchIn, TelemetryPointIn
 from app.repositories import Repositories
+from app.services.capacity import live_occupancy
 from app.services.matching import stops_around
 
 MOVING_MPS = 0.5
@@ -85,7 +87,11 @@ class TrackingService:
     ) -> BusState:
         loc = GeoPoint.of(point.lng, point.lat)
         speed = point.speed_mps or 0.0
-        occupancy = point.occupancy if point.occupancy is not None else (prev.occupancy if prev else 0)
+        baseline = (
+            point.occupancy if point.occupancy is not None else (prev.occupancy_baseline if prev else 0)
+        )
+        same = prev is not None and trip is not None and prev.trip_id == trip.id
+        boarded = prev.boarded_count if same and prev else 0  # re-counted by the ingest service
         base = {
             "id": bus.id,
             "ts": point.ts,
@@ -93,7 +99,11 @@ class TrackingService:
             "location": loc,
             "speed_mps": speed,
             "heading_deg": point.heading_deg,
-            "occupancy": occupancy,
+            "occupancy": live_occupancy(
+                baseline=baseline, boarded=0, capacity=bus.capacity, trip_completed=False
+            ),
+            "occupancy_baseline": baseline,
+            "boarded_count": boarded,
             "stale": False,
         }
         if trip is None or route is None:
@@ -149,6 +159,12 @@ class TrackingService:
         ):
             departures[prev.current_stop_id] = point.ts
 
+        base["occupancy"] = live_occupancy(
+            baseline=baseline,
+            boarded=boarded,
+            capacity=bus.capacity,
+            trip_completed=status is BusStatus.COMPLETED,
+        )
         return BusState(
             **base,
             trip_id=trip.id,
@@ -177,6 +193,34 @@ class TelemetryIngestService:
         self._tracking = TrackingService(settings)
         self._routes: dict[str, Route] = {}
         self._buses: dict[str, Bus] = {}
+        self._locks: dict[str, asyncio.Lock] = {}
+
+    def _lock_for(self, bus_id: str) -> asyncio.Lock:
+        """Serialises BusState read-modify-write per bus (telemetry vs. QR boarding)."""
+        return self._locks.setdefault(bus_id, asyncio.Lock())
+
+    async def _with_boardings(self, state: BusState, bus: Bus) -> BusState:
+        """Apply the occupancy rule with the AUTHORITATIVE boarding count for the trip."""
+        boarded = await self._repos.boarding_events.count_for_trip(state.trip_id) if state.trip_id else 0
+        occupancy = live_occupancy(
+            baseline=state.occupancy_baseline,
+            boarded=boarded,
+            capacity=bus.capacity,
+            trip_completed=state.status is BusStatus.COMPLETED,
+        )
+        return state.model_copy(update={"boarded_count": boarded, "occupancy": occupancy})
+
+    async def refresh_occupancy(self, bus_id: str) -> BusState | None:
+        """Re-derive occupancy right after a boarding (no new telemetry needed)."""
+        bus = await self._bus(bus_id)
+        async with self._lock_for(bus_id):
+            state = await self._repos.bus_states.get(bus_id)
+            if state is None:
+                return None
+            state = await self._with_boardings(state, bus)
+            await self._repos.bus_states.upsert(state)
+        await self._events.publish(BusStateUpdated(ts=state.ts, state=state))
+        return state
 
     async def _bus(self, bus_id: str) -> Bus:
         if bus_id not in self._buses:
@@ -238,15 +282,17 @@ class TelemetryIngestService:
             TelemetryReceived(ts=points[-1].ts, bus_id=bus.id, trip_id=batch.trip_id, count=len(points))
         )
 
-        state = await self._repos.bus_states.get(bus.id)
-        for p in points:
-            prev = state
-            state = self._tracking.derive(prev, bus, trip, route, p)
-            if trip is not None:
-                trip = await self._update_trip(trip, prev, state, p.ts)
-                await self._stop_events(prev, state, p.ts)
-        assert state is not None
-        await self._repos.bus_states.upsert(state)
+        async with self._lock_for(bus.id):
+            state = await self._repos.bus_states.get(bus.id)
+            for p in points:
+                prev = state
+                state = self._tracking.derive(prev, bus, trip, route, p)
+                if trip is not None:
+                    trip = await self._update_trip(trip, prev, state, p.ts)
+                    await self._stop_events(prev, state, p.ts)
+            assert state is not None
+            state = await self._with_boardings(state, bus)  # simulator ticks never erase boardings
+            await self._repos.bus_states.upsert(state)
         await self._events.publish(BusStateUpdated(ts=state.ts, state=state))
         return state
 

@@ -128,6 +128,8 @@ export function DashboardPanel(props: Props) {
           )}
           <QuickActions
             busId={a.bus.id}
+            simNowIso={fleet.sim?.sim_time ?? null}
+            onBoarded={() => void fleet.refresh()}
             onViewStop={() => props.onViewStop(a.boarding_stop.stop_id)}
             onViewAllBuses={props.onViewAllBuses}
             onViewRoute={() => props.onViewRoute(a.route.route_id)}

@@ -187,6 +187,26 @@ class MongoBoardingEventRepository(MongoRepository[BoardingEvent]):
     async def for_trip(self, trip_id: str) -> list[BoardingEvent]:
         return await self._find_sorted({"trip_id": trip_id}, [("ts", ASCENDING)])
 
+    async def insert_once(self, event: BoardingEvent) -> bool:
+        # The unique _id and the unique (student_id, trip_id) index make this atomic,
+        # including for concurrent requests.
+        try:
+            await self._coll.insert_one(event.to_mongo())
+        except DuplicateKeyError:
+            return False
+        return True
+
+    async def for_student_trip(self, student_id: str, trip_id: str) -> BoardingEvent | None:
+        raw = await self._coll.find_one({"student_id": student_id, "trip_id": trip_id})
+        return None if raw is None else self._model.from_mongo(raw)
+
+    async def count_for_trip(self, trip_id: str) -> int:
+        return await self._coll.count_documents({"trip_id": trip_id, "type": "board"})
+
+    async def delete_for_buses(self, bus_ids: Sequence[str]) -> int:
+        res = await self._coll.delete_many({"bus_id": {"$in": list(bus_ids)}})
+        return res.deleted_count
+
 
 class MongoDeviationRepository(MongoRepository[Deviation]):
     async def open_for_bus(self, bus_id: str) -> Deviation | None:

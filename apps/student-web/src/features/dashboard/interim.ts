@@ -27,7 +27,7 @@ import type {
   StopProximity,
 } from "../../api/types";
 
-const CAPACITY_WARN = 0.85;
+const CAPACITY_WARN_PCT = 85;
 
 export const STATUS_LABEL: Record<BusStatus, string> = {
   scheduled: "Scheduled",
@@ -107,13 +107,13 @@ export function dashboardAlerts(
     if (
       b.match &&
       b.match.proximity !== "passed_stop" &&
-      b.occupancy >= b.capacity * CAPACITY_WARN
+      (b.occupancy_percentage ?? 0) >= CAPACITY_WARN_PCT
     ) {
       out.push({
         id: `capacity-${b.bus_id}`,
         kind: "capacity",
         severity: "warning",
-        title: `Bus ${b.bus_id} is ${Math.round((100 * b.occupancy) / b.capacity)}% full`,
+        title: `Bus ${b.bus_id} is ${b.occupancy_percentage}% full`, // backend percentage
         body: `${b.occupancy}/${b.capacity} seats taken on ${b.route_direction_id}.`,
       });
     }
