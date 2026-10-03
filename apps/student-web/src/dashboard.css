@@ -816,3 +816,47 @@
   outline-offset: 2px;
   transform: scale(1.15);
 }
+
+/* ------------------------------------------------ commute decision (F7) */
+
+.decision .decision-headline {
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+}
+.decision-missed {
+  background: linear-gradient(180deg, #fef2f2, var(--surface) 70%);
+  border-color: #fecaca;
+}
+.decision-missed .decision-headline {
+  color: #991b1b;
+}
+.decision-missed .decision-icon {
+  background: #dc2626;
+}
+.decision-unknown {
+  background: var(--surface-2);
+}
+.decision-unknown .decision-headline {
+  color: var(--muted);
+}
+.decision-unknown .decision-icon {
+  background: #94a3b8;
+}
+.decision .decision-detail {
+  color: var(--text);
+  font-weight: 600;
+}
+.decision-alt {
+  margin: 10px 0 0;
+  font-size: 0.88rem;
+}
+.link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

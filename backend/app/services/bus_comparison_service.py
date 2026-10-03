@@ -56,6 +56,7 @@ from app.models.common import BusStatus
 from app.services.assignments import ResolvedAssignment
 from app.services.eta_service import EtaPrediction, EtaService
 from app.services.matching import ServingBus
+from app.services.tracking import is_stale
 
 # ----------------------------------------------------------------- crowding bands
 CROWDING_MEDIUM_FROM_PCT = 60
@@ -210,7 +211,7 @@ def compare(
             continue
         s = sb.state
         assigned = sb.bus.id == assigned_bus_id
-        stale = (now - s.last_seen).total_seconds() > stale_after_s
+        stale = is_stale(s, now, stale_after_s)
         pct = occupancy_percentage(s.occupancy, sb.bus.capacity)
         has_eta = p.eta_s is not None and math.isfinite(p.eta_s)
         comparable = has_eta and not stale and s.status is not BusStatus.BREAKDOWN

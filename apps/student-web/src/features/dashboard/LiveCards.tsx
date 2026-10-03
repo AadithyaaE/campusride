@@ -2,14 +2,16 @@ import type {
   ArrivalOut,
   AssignmentOut,
   BusStatus,
+  CommuteDecision,
+  CommuteDecisionOut,
   EtaPredictionOut,
   StopBusOut,
   StopProximity,
 } from "../../api/types";
 import { DirectionTag, RouteChip } from "../../components/Badges";
 import { countdownLabel, useWallClock, type SimReference } from "../../lib/countdown";
-import { formatCampusTime, formatDistance, formatEta, stopsAwayText } from "../../lib/format";
-import { hasEta, PROXIMITY_LABEL, STATUS_LABEL, type Decision } from "./interim";
+import { formatCampusTime, formatDistance, stopsAwayText } from "../../lib/format";
+import { hasEta, PROXIMITY_LABEL, STATUS_LABEL } from "./interim";
 
 export function SimTag({ label = "Simulated" }: { label?: string }) {
   return (
@@ -207,42 +209,91 @@ export function MyBusLiveCard({
   );
 }
 
-export function DecisionCard({ decision }: { decision: Decision }) {
-  const yes = decision.verdict === "YES";
+const VERDICT: Record<CommuteDecision, { label: string; icon: string; tone: string }> = {
+  YES: { label: "YES", icon: "✓", tone: "yes" },
+  RISK: { label: "RISK", icon: "⚠", tone: "risk" },
+  MISSED: { label: "MISSED", icon: "✕", tone: "missed" },
+  LOCATION_UNAVAILABLE: { label: "Location unavailable", icon: "?", tone: "unknown" },
+  UNKNOWN: { label: "Can’t tell yet", icon: "?", tone: "unknown" },
+};
+
+const walkLabel = (min: number) => (min === 0 ? "<1 min" : `${min} min`);
+
+/**
+ * "Will I make my bus?" — renders the BACKEND decision as given
+ * (`GET /students/me/commute-decision`). The browser never decides YES / RISK /
+ * MISSED; it only ticks the bus countdown from the backend's arrival timestamp.
+ */
+export function DecisionCard({
+  commute: d,
+  simRef,
+  onViewOptions,
+}: {
+  commute: CommuteDecisionOut;
+  simRef: SimReference | null;
+  onViewOptions?: () => void;
+}) {
+  const wallNow = useWallClock();
+  const v = VERDICT[d.decision ?? "UNKNOWN"];
+  const timed = d.decision === "YES" || d.decision === "RISK";
+  const arrives =
+    d.eta?.status === "at_stop"
+      ? "At your stop now"
+      : d.eta
+        ? countdownLabel(d.eta, simRef, wallNow)
+        : d.bus_eta_minutes !== null
+          ? walkLabel(d.bus_eta_minutes)
+          : "—";
   return (
-    <section
-      className={`live-card decision ${yes ? "decision-yes" : "decision-risk"}`}
-      aria-label="Will I make my bus?"
-    >
+    <section className={`live-card decision decision-${v.tone}`} aria-label="Will I make my bus?">
       <header className="live-card-head">
-        <p className="eyebrow">Will I make my bus?</p>
-        <SimTag label="Estimate" />
+        <p className="eyebrow">Can I catch bus {d.bus_number}?</p>
+        <SimTag label={d.student_location ? "Simulated location" : "Simulated"} />
       </header>
-      <p className="decision-headline" role="status">
+      <p className="decision-headline" role="status" aria-label={`Decision: ${v.label}`}>
         <span className="decision-icon" aria-hidden="true">
-          {yes ? "✓" : "!"}
+          {v.icon}
         </span>
-        {decision.headline}
+        {v.label}
       </p>
-      <p className="decision-detail">{decision.detail}</p>
-      <dl className="metrics metrics-3">
-        <div>
-          <dt>Bus ETA</dt>
-          <dd>{formatEta(decision.etaMin)}</dd>
-        </div>
-        <div>
-          <dt>Your walk</dt>
-          <dd>{decision.walkMin} min</dd>
-        </div>
-        <div>
-          <dt>Buffer</dt>
-          <dd>{decision.bufferMin === null ? "—" : `${decision.bufferMin} min`}</dd>
-        </div>
-      </dl>
-      <p className="confidence">
-        <span className={`conf-dot conf-${decision.confidence.toLowerCase()}`} aria-hidden="true" />
-        Confidence: <strong>{decision.confidence}</strong>
-        <span className="muted"> · backend ETA; decision rule and walking time are interim</span>
+      <p className="decision-detail">{d.reason}</p>
+      {timed && (
+        <dl className="metrics metrics-3">
+          <div>
+            <dt>Bus arrives in</dt>
+            <dd aria-label={`Bus arrives in ${arrives}`}>{arrives}</dd>
+          </div>
+          <div>
+            <dt>Walking time</dt>
+            <dd>{d.walking_time_minutes === null ? "—" : walkLabel(d.walking_time_minutes)}</dd>
+          </div>
+          <div>
+            <dt>Safety buffer</dt>
+            <dd>{d.safety_buffer_minutes} min</dd>
+          </div>
+        </dl>
+      )}
+      {d.decision === "LOCATION_UNAVAILABLE" && (
+        <p className="footnote">
+          Location unavailable — we can’t estimate your walk, so there is no YES / RISK answer.
+        </p>
+      )}
+      {(d.decision === "MISSED" || d.decision === "RISK") && d.alternatives_available > 0 && (
+        <p className="decision-alt">
+          {d.alternatives_available} other bus{d.alternatives_available === 1 ? "" : "es"} serve
+          your stop.{" "}
+          {onViewOptions && (
+            <button type="button" className="link-button" onClick={onViewOptions}>
+              See bus options
+            </button>
+          )}
+        </p>
+      )}
+      <p className="footnote">
+        {d.student_location && d.walking_distance_m !== null
+          ? `Walk ≈ ${formatDistance(d.walking_distance_m)} from your simulated location (demo, not GPS). `
+          : ""}
+        Rule-based estimate from the backend; your assigned bus stays {d.bus_number}.
       </p>
     </section>
   );

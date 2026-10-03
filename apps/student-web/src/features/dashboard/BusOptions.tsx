@@ -34,7 +34,7 @@ export function BusOptions({ options, simRef, selectedBusId, onSelectBus }: Prop
   const stop = options.boarding_stop?.name ?? "your stop";
   const others = options.options.filter((o) => !o.is_assigned_bus).length;
   return (
-    <section className="live-card bus-options" aria-label="Bus options">
+    <section id="bus-options" className="live-card bus-options" aria-label="Bus options">
       <header className="live-card-head">
         <p className="eyebrow">Bus options · {stop}</p>
         <SimTag />

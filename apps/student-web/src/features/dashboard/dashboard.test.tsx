@@ -227,7 +227,7 @@ describe("Dashboard — live state from the backend", () => {
     expect(mapProps.current?.myStopId).toBe("X2"); // boarding stop highlighted
   });
 
-  it("shows the interim decision and alerts derived from backend matching", async () => {
+  it("shows the BACKEND decision and interim alerts derived from backend data", async () => {
     signedInApp({
       "GET /api/v1/students/me/arrivals": () =>
         json({
@@ -244,10 +244,9 @@ describe("Dashboard — live state from the backend", () => {
         }),
     });
     const decision = await screen.findByRole("region", { name: "Will I make my bus?" });
-    expect(within(decision).getByRole("status")).toHaveTextContent(
-      /(YES — You can catch|RISK — You may miss) Bus BX7/,
-    );
-    expect(decision).toHaveTextContent("backend ETA; decision rule and walking time are interim");
+    expect(within(decision).getByRole("status")).toHaveTextContent("YES");
+    expect(decision).toHaveTextContent("Can I catch bus BX7?");
+    expect(decision).toHaveTextContent("Rule-based estimate from the backend");
     const alerts = screen.getByRole("list", { name: "Alert list" });
     expect(alerts).toHaveTextContent("Bus BX7 is running late");
     expect(alerts).toHaveTextContent("About 7 min behind the timetable.");
@@ -305,11 +304,39 @@ describe("Dashboard — live state from the backend", () => {
     );
   });
 
+  it("polls the BACKEND commute decision and shows its change on the next poll", async () => {
+    let n = 0;
+    const { backend } = signedInApp({
+      "GET /api/v1/students/me/commute-decision": () => {
+        n += 1;
+        return json(
+          n === 1
+            ? fx.myCommute
+            : fx.commute({
+                decision: "MISSED",
+                reason: "Your assigned bus has already passed your stop.",
+                eta: null,
+              }),
+        );
+      },
+    });
+    const card = await screen.findByRole("region", { name: "Will I make my bus?" });
+    expect(backend.calls).toContain("GET /api/v1/students/me/commute-decision");
+    expect(within(card).getByRole("status")).toHaveAccessibleName("Decision: YES");
+    await pollOnce();
+    await flush();
+    expect(
+      within(screen.getByRole("region", { name: "Will I make my bus?" })).getByRole("status"),
+    ).toHaveAccessibleName("Decision: MISSED");
+    expect(backend.calls.filter((c) => c.includes("commute-decision?"))).toEqual([]); // no bus/stop params
+  });
+
   it("shows no bus options to an unassigned student", async () => {
     signedInApp({
       "GET /api/v1/students/me/assignment": () => json(fx.unassigned),
       "GET /api/v1/students/me/arrivals": () => json(fx.myArrivalsUnassigned),
       "GET /api/v1/students/me/bus-options": () => json(fx.myBusOptionsUnassigned),
+      "GET /api/v1/students/me/commute-decision": () => json(fx.myCommuteUnassigned),
     });
     await screen.findByText("Your bus assignment is not available yet.");
     expect(screen.queryByRole("region", { name: "Bus options" })).not.toBeInTheDocument();

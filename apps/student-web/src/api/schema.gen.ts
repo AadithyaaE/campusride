@@ -470,6 +470,49 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/students/me/commute-decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My Commute Decision
+     * @description "Will I make my bus?" for the student's ASSIGNED bus and boarding stop.
+     *
+     *     Deterministic rules (no ML, no probability). Everything is derived from the
+     *     assignment — the caller cannot substitute a bus or stop.
+     */
+    get: operations["my_commute_decision_api_v1_students_me_commute_decision_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/students/{student_id}/commute-decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Student Commute Decision
+     * @description Same decision for a given student: the student themself, or an admin.
+     */
+    get: operations["student_commute_decision_api_v1_students__student_id__commute_decision_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -844,6 +887,60 @@ export interface components {
       speed: number;
       /** Paused */
       paused: boolean;
+    };
+    /** CommuteDecisionOut */
+    CommuteDecisionOut: {
+      /** Student Id */
+      student_id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "assigned" | "unassigned";
+      /** Decision */
+      decision: ("YES" | "RISK" | "MISSED" | "LOCATION_UNAVAILABLE" | "UNKNOWN") | null;
+      /** Reason */
+      reason: string | null;
+      /** Bus Id */
+      bus_id: string | null;
+      /** Bus Number */
+      bus_number: string | null;
+      /** Route Direction Id */
+      route_direction_id: string | null;
+      boarding_stop: components["schemas"]["StopSummaryOut"] | null;
+      student_location: components["schemas"]["StudentLocationOut"] | null;
+      /** Walking Distance M */
+      walking_distance_m: number | null;
+      /** Walking Speed Mps */
+      walking_speed_mps: number | null;
+      /** Walking Time Minutes */
+      walking_time_minutes: number | null;
+      /** Bus Eta Minutes */
+      bus_eta_minutes: number | null;
+      /** Bus Arrival Time */
+      bus_arrival_time: string | null;
+      /** Required Arrival Time */
+      required_arrival_time: string | null;
+      /** Student Arrival Time */
+      student_arrival_time: string | null;
+      /** Safety Buffer Minutes */
+      safety_buffer_minutes: number;
+      /** Spare Minutes */
+      spare_minutes: number | null;
+      /** Delay Minutes */
+      delay_minutes: number | null;
+      bus_status: components["schemas"]["BusStatus"] | null;
+      proximity: components["schemas"]["StopProximity"] | null;
+      /** Stale */
+      stale: boolean;
+      eta: components["schemas"]["EtaPredictionOut"] | null;
+      /** Alternatives Available */
+      alternatives_available: number;
+      /**
+       * Computed At
+       * Format: date-time
+       */
+      computed_at: string;
     };
     /**
      * Direction
@@ -1298,6 +1395,17 @@ export interface components {
       id: string;
       /** Name */
       name: string;
+    };
+    /** StudentLocationOut */
+    StudentLocationOut: {
+      location: components["schemas"]["GeoPoint"];
+      /**
+       * Source
+       * @constant
+       */
+      source: "synthetic";
+      /** Label */
+      label: string;
     };
     /** TelemetryBatchIn */
     TelemetryBatchIn: {
@@ -2021,6 +2129,57 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BusOptionsOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  my_commute_decision_api_v1_students_me_commute_decision_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CommuteDecisionOut"];
+        };
+      };
+    };
+  };
+  student_commute_decision_api_v1_students__student_id__commute_decision_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        student_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CommuteDecisionOut"];
         };
       };
       /** @description Validation Error */

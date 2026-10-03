@@ -60,6 +60,11 @@ def scheduled_offset_at(direction: RouteDirection, d: float) -> float:
     return float(stops[-1].scheduled_offset_s)
 
 
+def is_stale(state: BusState, now: datetime, stale_after_s: float) -> bool:
+    """No fix for longer than ``BUS_STALE_AFTER_S`` — position/timing can't be trusted."""
+    return (now - state.last_seen).total_seconds() > stale_after_s
+
+
 def is_delayed(state: BusState) -> bool:
     return state.delay_s >= DELAYED_AFTER_S and state.status in (BusStatus.EN_ROUTE, BusStatus.DWELLING)
 

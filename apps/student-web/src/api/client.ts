@@ -17,6 +17,7 @@ import {
   isBus,
   isBusEta,
   isBusOptions,
+  isCommuteDecision,
   isBusDetail,
   isMe,
   isMyArrivals,
@@ -36,6 +37,7 @@ import {
 import type {
   BusEtaOut,
   BusOptionsOut,
+  CommuteDecisionOut,
   MyArrivalsOut,
   StopArrivalsOut,
   BusDetailOut,
@@ -217,6 +219,14 @@ export class ApiClient {
    */
   myBusOptions(): Promise<BusOptionsOut> {
     return this.request("/students/me/bus-options", { guard: isBusOptions });
+  }
+
+  /**
+   * Backend "Will I make my bus?" for the ASSIGNED bus and boarding stop (Feature 7).
+   * Derived entirely from the assignment — no bus or stop can be passed in.
+   */
+  myCommuteDecision(): Promise<CommuteDecisionOut> {
+    return this.request("/students/me/commute-decision", { guard: isCommuteDecision });
   }
 
   listStops(): Promise<StopOut[]> {

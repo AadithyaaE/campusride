@@ -8,25 +8,25 @@
  *   next stop, distance, proximity, AND the ETA (`eta_minutes`,
  *   `estimated_arrival_time`, traffic, confidence) — `GET /students/me/arrivals`,
  *   and the multi-bus comparison (crowding, FASTEST / LEAST_CROWDED / ASSIGNED /
- *   BEST_ALTERNATIVE) — `GET /students/me/bus-options`.
+ *   BEST_ALTERNATIVE) — `GET /students/me/bus-options`, and "Will I make my bus?"
+ *   (YES / RISK / MISSED) — `GET /students/me/commute-decision`.
  *
- * INTERIM (this file — labelled "Estimate" in the UI):
- *   • "Will I make my bus?"  = backend ETA − assumed walking time   → Phase 4 decision engine
- *   • alerts                 = simple rules over backend data        → Phase 6 alerts
+ * INTERIM (this file):
+ *   • alerts = simple rules over backend data → Phase 6 alerts
  *
- * There is deliberately NO ETA formula in the browser.
+ * There is deliberately NO ETA formula and NO commute decision in the browser.
  */
 import type {
   ArrivalOut,
   BusOptionsOut,
   BusOut,
   BusStatus,
+  CommuteDecisionOut,
   MyArrivalsOut,
   StopBusOut,
   StopProximity,
 } from "../../api/types";
 
-const YES_BUFFER_MIN = 3;
 const CAPACITY_WARN = 0.85;
 
 export const STATUS_LABEL: Record<BusStatus, string> = {
@@ -46,16 +46,6 @@ export const PROXIMITY_LABEL: Record<StopProximity, string> = {
   passed_stop: "Passed your stop",
 };
 
-export interface Decision {
-  verdict: "YES" | "RISK";
-  headline: string;
-  detail: string;
-  etaMin: number | null;
-  walkMin: number;
-  bufferMin: number | null;
-  confidence: "High" | "Medium" | "Low";
-}
-
 export interface DashboardAlert {
   id: string;
   kind: "approaching" | "delay" | "capacity" | "deviation" | "alternative";
@@ -63,19 +53,6 @@ export interface DashboardAlert {
   title: string;
   body: string;
 }
-
-/** Stable small hash (synthetic per-student walking time). */
-export function hash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-/** Synthetic, assumed walk to the boarding stop (4–9 min). No GPS is used. */
-export const assumedWalkMin = (studentId: string) => 4 + (hash(studentId) % 6);
 
 export const hasEta = (b: ArrivalOut | StopBusOut | null | undefined): b is ArrivalOut =>
   !!b && "eta" in b && !!(b as ArrivalOut).eta;
@@ -88,56 +65,9 @@ export const backendEtaMin = (b: ArrivalOut | StopBusOut | null | undefined): nu
 export const otherArrivals = (a: MyArrivalsOut | null): ArrivalOut[] =>
   a?.status === "assigned" ? a.arrivals.filter((x) => !x.is_assigned_bus) : [];
 
-export function decide(a: MyArrivalsOut | null, walkMin: number): Decision | null {
-  const mine = a?.my_bus;
-  if (!a || a.status !== "assigned" || !mine) return null;
-  const id = mine.bus_id;
-  const eta = a.my_bus_serving_stop ? backendEtaMin(mine) : null;
-  if (eta === null) {
-    const detail = !a.my_bus_serving_stop
-      ? `Bus ${id} is running ${mine.direction_label}, not your trip right now.`
-      : hasEta(mine) && mine.eta.status === "completed"
-        ? `Bus ${id} has finished this trip.`
-        : `Bus ${id} has already passed your stop.`;
-    return {
-      verdict: "RISK",
-      headline: `RISK — You may miss Bus ${id}`,
-      detail,
-      etaMin: null,
-      walkMin,
-      bufferMin: null,
-      confidence: "Low",
-    };
-  }
-  const buffer = eta - walkMin;
-  if (buffer >= YES_BUFFER_MIN) {
-    return {
-      verdict: "YES",
-      headline: `YES — You can catch Bus ${id}`,
-      detail: `You'd reach the stop about ${buffer} min before the bus.`,
-      etaMin: eta,
-      walkMin,
-      bufferMin: buffer,
-      confidence: buffer >= 6 ? "High" : "Medium",
-    };
-  }
-  return {
-    verdict: "RISK",
-    headline: `RISK — You may miss Bus ${id}`,
-    detail:
-      buffer >= 0
-        ? `Only ${buffer} min to spare — leave now.`
-        : `The bus is due ${-buffer} min before you can reach the stop.`,
-    etaMin: eta,
-    walkMin,
-    bufferMin: buffer,
-    confidence: buffer >= 0 ? "Medium" : "Low",
-  };
-}
-
 export function dashboardAlerts(
   a: MyArrivalsOut | null,
-  decision: Decision | null,
+  commute: CommuteDecisionOut | null,
   options: BusOptionsOut | null,
   allBuses: BusOut[],
 ): DashboardAlert[] {
@@ -203,7 +133,8 @@ export function dashboardAlerts(
   const best = options?.options.find(
     (o) => o.indicators.includes("BEST_ALTERNATIVE") && !o.is_assigned_bus,
   );
-  if (decision?.verdict === "RISK" && best) {
+  // Information only — the decision stays about the ASSIGNED bus (recovery is Feature 8).
+  if ((commute?.decision === "RISK" || commute?.decision === "MISSED") && best) {
     out.push({
       id: `alternative-${best.bus_id}`,
       kind: "alternative",

@@ -7,6 +7,7 @@ import type {
   ArrivalOut,
   BusOptionOut,
   BusOptionsOut,
+  CommuteDecisionOut,
   EtaPredictionOut,
   MyArrivalsOut,
   BusLiveOut,
@@ -533,3 +534,69 @@ export const myBusOptionsUnassigned: BusOptionsOut = {
   options: [],
   excluded: [],
 };
+
+/**
+ * A FAKE backend commute decision for the assigned bus BX7 (`GET /students/me/commute-decision`).
+ * Default: YES — bus in 7 min, 4 min walk, 2 min buffer.
+ */
+export function commute(over: Partial<CommuteDecisionOut> = {}): CommuteDecisionOut {
+  const prediction = eta(7);
+  return {
+    student_id: me.id,
+    status: "assigned",
+    decision: "YES",
+    reason: "You should reach your stop before the bus.",
+    bus_id: "BX7",
+    bus_number: "BX7",
+    route_direction_id: "T2",
+    boarding_stop: { id: "X2", name: "Test Stop B" },
+    student_location: {
+      location: { type: "Point", coordinates: [80.21, 12.91] },
+      source: "synthetic",
+      label: "Simulated location (demo, not GPS)",
+    },
+    walking_distance_m: 340,
+    walking_speed_mps: 1.4,
+    walking_time_minutes: 4,
+    bus_eta_minutes: 7,
+    bus_arrival_time: prediction.estimated_arrival_time,
+    required_arrival_time: new Date(Date.parse(COMPUTED_AT) + 300_000).toISOString(),
+    student_arrival_time: new Date(Date.parse(COMPUTED_AT) + 240_000).toISOString(),
+    safety_buffer_minutes: 2,
+    spare_minutes: 3,
+    delay_minutes: 0,
+    bus_status: "en_route",
+    proximity: "far_from_stop",
+    stale: false,
+    eta: prediction,
+    alternatives_available: 2,
+    computed_at: COMPUTED_AT,
+    ...over,
+  };
+}
+
+export const myCommute: CommuteDecisionOut = commute();
+
+export const myCommuteUnassigned: CommuteDecisionOut = commute({
+  status: "unassigned",
+  decision: null,
+  reason: "Your bus assignment is not available yet.",
+  bus_id: null,
+  bus_number: null,
+  route_direction_id: null,
+  boarding_stop: null,
+  student_location: null,
+  walking_distance_m: null,
+  walking_speed_mps: null,
+  walking_time_minutes: null,
+  bus_eta_minutes: null,
+  bus_arrival_time: null,
+  required_arrival_time: null,
+  student_arrival_time: null,
+  spare_minutes: null,
+  delay_minutes: null,
+  bus_status: null,
+  proximity: null,
+  eta: null,
+  alternatives_available: 0,
+});

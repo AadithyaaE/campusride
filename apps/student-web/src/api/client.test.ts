@@ -248,6 +248,24 @@ describe("ApiClient", () => {
     expect(mine.my_bus?.bus_id).toBe("BX7");
   });
 
+  it("validates the backend commute decision (Feature 7)", async () => {
+    const ok = await makeClient(async () => json(fx.myCommute)).myCommuteDecision();
+    expect(ok.decision).toBe("YES");
+    const none = await makeClient(async () => json(fx.myCommuteUnassigned)).myCommuteDecision();
+    expect(none.decision).toBeNull();
+    for (const bad of [
+      fx.commute({ decision: "PROBABLY" as never }),
+      fx.commute({ walking_time_minutes: 3.7 }),
+      fx.commute({
+        student_location: { ...fx.myCommute.student_location!, source: "gps" as never },
+      }),
+    ]) {
+      await expect(makeClient(async () => json(bad)).myCommuteDecision()).rejects.toBeInstanceOf(
+        MalformedResponseError,
+      );
+    }
+  });
+
   it("validates the backend bus comparison (Feature 6)", async () => {
     const ok = await makeClient(async () => json(fx.myBusOptions)).myBusOptions();
     expect(ok.options.map((o) => o.indicators)).toEqual([

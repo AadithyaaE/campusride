@@ -66,6 +66,15 @@ class Settings(BaseSettings):
     deviation_threshold_m: float = 150.0
     deviation_consecutive_pings: int = 3
 
+    # --- commute decision (Feature 7, prototype values — not statistically calibrated) ---
+    walking_speed_mps: float = 1.4
+    """Fallback walking speed when a student has no profile speed (seeded profiles carry one)."""
+    commute_safety_buffer_s: float = 120.0
+    """Arrive at least this long before the bus (road crossing, finding the boarding point)."""
+    student_location_mode: Literal["synthetic", "off"] = "synthetic"
+    """``synthetic``: deterministic demo location near the boarding stop (no real GPS yet);
+    ``off``: no location source → LOCATION_UNAVAILABLE."""
+
     # --- paths ---
     seed_data_dir: Path = BACKEND_DIR / "data" / "seed"
 

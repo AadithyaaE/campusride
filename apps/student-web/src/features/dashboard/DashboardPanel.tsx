@@ -5,7 +5,8 @@
  *   (`GET /students/me/assignment`), live bus state (`GET /buses`), stop matching
  *   and ETAs (`GET /students/me/arrivals`), the multi-bus comparison
  *   (`GET /students/me/bus-options`) — polled, see data/liveFleet.ts.
- * INTERIM (interim.ts): "Will I make my bus?" and alerts —
+ *   and "Will I make my bus?" (`GET /students/me/commute-decision`).
+ * INTERIM (interim.ts): alerts —
  *   labelled as estimates until Phases 4/6 provide them from the backend.
  */
 import type { ReactNode } from "react";
@@ -20,7 +21,7 @@ import { AlertsList } from "./AlertsList";
 import { BusList, type BusView } from "./BusList";
 import { BusOptions } from "./BusOptions";
 import { DemoControls } from "./DemoControls";
-import type { DashboardAlert, Decision } from "./interim";
+import type { DashboardAlert } from "./interim";
 import { DecisionCard, MyBusLiveCard } from "./LiveCards";
 import { QuickActions } from "./QuickActions";
 
@@ -28,7 +29,6 @@ type Loadable<T> = AsyncState<T> & { reload: () => void };
 
 /** Interim estimates layered on the backend's matching / ETA / comparison results. */
 export interface DashboardData {
-  decision: Decision | null;
   /** Other buses serving the boarding stop, in the backend's ETA order. */
   atMyStop: ArrivalOut[];
   alerts: DashboardAlert[];
@@ -107,7 +107,17 @@ export function DashboardPanel(props: Props) {
             paused={paused}
             simRef={simRef}
           />
-          {data.decision && <DecisionCard decision={data.decision} />}
+          {fleet.commute?.status === "assigned" && (
+            <DecisionCard
+              commute={fleet.commute}
+              simRef={simRef}
+              onViewOptions={() =>
+                document
+                  .getElementById("bus-options")
+                  ?.scrollIntoView?.({ behavior: "smooth", block: "start" })
+              }
+            />
+          )}
           {fleet.options?.status === "assigned" && (
             <BusOptions
               options={fleet.options}

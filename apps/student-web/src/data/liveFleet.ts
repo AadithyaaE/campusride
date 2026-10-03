@@ -3,7 +3,8 @@
  * and the backend's stop matching for the signed-in student.
  *
  * Lightweight POLLING of `GET /buses`, `GET /students/me/arrivals` (matching +
- * backend ETA), `GET /students/me/bus-options` (backend multi-bus comparison) and
+ * backend ETA), `GET /students/me/bus-options` (backend multi-bus comparison),
+ * `GET /students/me/commute-decision` (backend "Will I make my bus?") and
  * `GET /sim/status` every few seconds —
  * the WebSocket feed replaces this later. The browser never computes bus
  * positions; it only displays what the backend reports.
@@ -11,7 +12,13 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useApi } from "../api/ApiContext";
-import type { BusOptionsOut, BusOut, MyArrivalsOut, SimStatusOut } from "../api/types";
+import type {
+  BusOptionsOut,
+  BusOut,
+  CommuteDecisionOut,
+  MyArrivalsOut,
+  SimStatusOut,
+} from "../api/types";
 
 export const POLL_MS = 3_000;
 
@@ -21,6 +28,8 @@ export interface LiveFleet {
   arrivals: MyArrivalsOut | null;
   /** Backend comparison of the buses serving the boarding stop (indicators, crowding). */
   options: BusOptionsOut | null;
+  /** Backend "Will I make my bus?" decision for the ASSIGNED bus. */
+  commute: CommuteDecisionOut | null;
   sim: SimStatusOut | null;
   error: Error | null;
   /** Wall-clock time of the last successful poll. */
@@ -39,21 +48,24 @@ export function useLiveFleet(pollMs: number = POLL_MS): LiveFleet {
   const [buses, setBuses] = useState<BusOut[] | null>(null);
   const [arrivals, setArrivals] = useState<MyArrivalsOut | null>(null);
   const [options, setOptions] = useState<BusOptionsOut | null>(null);
+  const [commute, setCommute] = useState<CommuteDecisionOut | null>(null);
   const [sim, setSim] = useState<SimStatusOut | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [b, a, o, s] = await Promise.all([
+      const [b, a, o, d, s] = await Promise.all([
         api.listBuses(),
         api.myArrivals(),
         api.myBusOptions(),
+        api.myCommuteDecision(),
         api.simStatus(),
       ]);
       setBuses(b);
       setArrivals(a);
       setOptions(o);
+      setCommute(d);
       setSim(s);
       setError(null);
       setFetchedAt(new Date());
@@ -92,6 +104,7 @@ export function useLiveFleet(pollMs: number = POLL_MS): LiveFleet {
     buses,
     arrivals,
     options,
+    commute,
     sim,
     error,
     fetchedAt,

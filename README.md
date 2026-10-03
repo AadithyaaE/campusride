@@ -21,6 +21,7 @@ Architecture and decisions: [docs/architecture.md](docs/architecture.md).
 | F4 | Stop + route matching — backend decides which buses serve a stop (by route direction), current/previous/next stop, far/approaching/at/passed; `GET /stops/{id}/buses`, `GET /students/me/stop/buses` | ✅ done |
 | F5 | Backend ETA prediction + multi-bus arrivals — deterministic ETA (distance, traffic profiles × time of day, timetable average, delay, dwell, stops left), confidence, traffic level; `GET /buses/{id}/eta?stop_id=`, `GET /stops/{id}/arrivals`, `GET /students/me/arrivals`; live countdown in the dashboard | ✅ done |
 | F6 | Multi-bus comparison — backend compares the buses serving the student's assigned stop (ETA, occupancy %, crowding, delay, confidence) with FASTEST / LEAST CROWDED / ASSIGNED / BEST ALTERNATIVE indicators; `GET /students/me/bus-options` (+ owner/admin `GET /students/{id}/bus-options`); Bus options card linked to the map | ✅ done |
+| F7 | "Will I make my bus?" — deterministic commute decision for the ASSIGNED bus (YES / RISK / MISSED; walk from a synthetic demo location, safety buffer, Feature 5 arrival time, Feature 4 passed/completed); `GET /students/me/commute-decision` (+ owner/admin `GET /students/{id}/commute-decision`) | ✅ done |
 | 2 | Simulator, telemetry ingestion, WebSocket, live buses on the student map | next |
 | 3 | Stop selection, matching, baseline ETA, multi-bus arrivals | |
 | 4 | "Will I make my bus?", missed-bus recovery | |

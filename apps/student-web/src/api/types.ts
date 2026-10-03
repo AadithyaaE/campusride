@@ -41,6 +41,9 @@ export type MyArrivalsOut = Schemas["MyArrivalsOut"];
 export type BusEtaOut = Schemas["BusEtaOut"];
 export type BusOptionOut = Schemas["BusOptionOut"];
 export type BusOptionsOut = Schemas["BusOptionsOut"];
+export type CommuteDecisionOut = Schemas["CommuteDecisionOut"];
+/** Backend commute decision (Feature 7); YES / RISK / MISSED are the decisions. */
+export type CommuteDecision = NonNullable<CommuteDecisionOut["decision"]>;
 /** Backend comparison indicator (Feature 6). */
 export type BusIndicator = BusOptionOut["indicators"][number];
 

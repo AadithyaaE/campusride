@@ -4,10 +4,8 @@ import type { MyArrivalsOut } from "../../api/types";
 import * as fx from "../../test/fixtures";
 import * as interim from "./interim";
 import {
-  assumedWalkMin,
   backendEtaMin,
   dashboardAlerts,
-  decide,
   otherArrivals,
   PROXIMITY_LABEL,
   STATUS_LABEL,
@@ -27,38 +25,11 @@ describe("interim rules on top of the BACKEND ETA", () => {
     expect(backendEtaMin(fx.stopBus("BX7", {}))).toBeNull(); // no eta object → nothing invented
   });
 
-  it("decides YES / RISK from the backend ETA and the assumed walk", () => {
-    expect(decide(fx.myArrivals, 3)).toMatchObject({
-      verdict: "YES",
-      etaMin: 7,
-      bufferMin: 4,
-      confidence: "Medium",
-    });
-    expect(decide(fx.myArrivals, 6)).toMatchObject({ verdict: "RISK", bufferMin: 1 });
-    expect(decide(fx.myArrivals, 9)).toMatchObject({ verdict: "RISK", bufferMin: -2 });
-    expect(decide(fx.myArrivalsUnassigned, 5)).toBeNull();
-    expect(assumedWalkMin("U-T1")).toBe(assumedWalkMin("U-T1"));
-  });
-
-  it("passed / completed / other-direction states come from the backend", () => {
-    const passed = withArrivals({
-      my_bus: fx.arrival("BX7", { proximity: "passed_stop" }, fx.eta(null)),
-    });
-    expect(decide(passed, 4)).toMatchObject({ verdict: "RISK", etaMin: null });
-    expect(decide(passed, 4)!.detail).toContain("passed your stop");
-    const completed = withArrivals({
-      my_bus: fx.arrival(
-        "BX7",
-        { proximity: "passed_stop" },
-        fx.eta(null, { status: "completed" }),
-      ),
-    });
-    expect(decide(completed, 4)!.detail).toContain("finished this trip");
-    const other = withArrivals({
-      my_bus_serving_stop: false,
-      my_bus: fx.stopBus("BX7", null, { direction_label: "T2-E — From Campus" }),
-    });
-    expect(decide(other, 4)!.detail).toContain("T2-E — From Campus");
+  it('no longer decides "Will I make my bus?" in the browser', () => {
+    // Feature 7: the decision comes from GET /students/me/commute-decision
+    for (const name of ["decide", "assumedWalkMin", "hash", "YES_BUFFER_MIN"]) {
+      expect(name in interim).toBe(false);
+    }
   });
 
   it("keeps the backend's ETA order for other buses and no longer recommends in the browser", () => {
@@ -93,7 +64,7 @@ describe("interim rules on top of the BACKEND ETA", () => {
         }),
       ],
     };
-    const alerts = dashboardAlerts(a, decide(a, 9), options, deviated);
+    const alerts = dashboardAlerts(a, fx.commute({ decision: "RISK" }), options, deviated);
     const byKind = Object.fromEntries(alerts.map((x) => [x.kind, x]));
     expect(byKind.approaching?.body).toBe("About 2 min from Test Stop B."); // backend ETA
     expect(byKind.delay?.body).toBe("About 6 min behind the timetable.");
@@ -101,8 +72,14 @@ describe("interim rules on top of the BACKEND ETA", () => {
     expect(byKind.deviation?.title).toBe("Bus BX9 is off its usual route");
     expect(byKind.alternative?.title).toBe("Alternative: Bus BX9 (T2)"); // backend BEST_ALTERNATIVE
     expect(byKind.alternative?.body).toContain("low crowding");
+    // a YES for the assigned bus raises no alternative alert
     expect(
-      dashboardAlerts(a, decide(a, 9), null, fx.buses).some((x) => x.kind === "alternative"),
+      dashboardAlerts(a, fx.myCommute, options, fx.buses).some((x) => x.kind === "alternative"),
+    ).toBe(false);
+    expect(
+      dashboardAlerts(a, fx.commute({ decision: "RISK" }), null, fx.buses).some(
+        (x) => x.kind === "alternative",
+      ),
     ).toBe(false);
     expect(dashboardAlerts(fx.myArrivalsUnassigned, null, null, fx.buses)).toEqual([]);
   });

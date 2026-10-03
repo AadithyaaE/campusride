@@ -23,8 +23,10 @@ from app.models.common import Role
 from app.repositories import Repositories
 from app.services.bus_comparison_service import BusComparisonService
 from app.services.bus_simulator import BusSimulator
+from app.services.commute_decision_service import CommuteDecisionService
 from app.services.eta_service import EtaService
 from app.services.matching import MatchingService
+from app.services.student_location import StudentLocationSource
 from app.services.tracking import TelemetryIngestService
 
 
@@ -44,6 +46,7 @@ class AppContainer:
     matching_service: MatchingService | None = None
     eta_service: EtaService | None = None
     comparison_service: BusComparisonService | None = None
+    commute_service: CommuteDecisionService | None = None
 
     def matching(self) -> MatchingService:
         """Stop ↔ bus matching (caches static route data for the app's lifetime)."""
@@ -62,6 +65,18 @@ class AppContainer:
         if self.comparison_service is None:
             self.comparison_service = BusComparisonService(self.eta(), self.settings, self.clock)
         return self.comparison_service
+
+    def commute(self) -> CommuteDecisionService:
+        """ "Will I make my bus?" on top of comparison / ETA / matching (+ synthetic location)."""
+        if self.commute_service is None:
+            self.commute_service = CommuteDecisionService(
+                self.comparison(),
+                self.repos,
+                self.settings,
+                self.clock,
+                StudentLocationSource(self.settings),
+            )
+        return self.commute_service
 
     def telemetry_ingest(self) -> TelemetryIngestService:
         if self.ingest is None:

@@ -12,6 +12,7 @@ import type {
   BusEtaOut,
   BusOptionOut,
   BusOptionsOut,
+  CommuteDecisionOut,
   EtaPredictionOut,
   MyArrivalsOut,
   StopArrivalsOut,
@@ -269,3 +270,24 @@ export const isBusOptions: Guard<BusOptionsOut> = (v): v is BusOptionsOut =>
   Array.isArray(v.excluded) &&
   ((v.status === "assigned" && isObj(v.boarding_stop) && isStr(v.assigned_bus_id)) ||
     (v.status === "unassigned" && v.boarding_stop === null && v.options.length === 0));
+
+const DECISIONS = ["YES", "RISK", "MISSED", "LOCATION_UNAVAILABLE", "UNKNOWN"];
+const isStrOrNull = (v: unknown) => v === null || isStr(v);
+
+export const isCommuteDecision: Guard<CommuteDecisionOut> = (v): v is CommuteDecisionOut =>
+  isObj(v) &&
+  isStr(v.student_id) &&
+  isIntOrNull(v.walking_time_minutes) &&
+  isIntOrNull(v.bus_eta_minutes) &&
+  isIntOrNull(v.walking_distance_m) &&
+  isIntOrNull(v.spare_minutes) &&
+  isNum(v.safety_buffer_minutes) &&
+  Number.isInteger(v.safety_buffer_minutes) &&
+  isStrOrNull(v.bus_arrival_time) &&
+  isStrOrNull(v.required_arrival_time) &&
+  isBool(v.stale) &&
+  (v.eta === null || isEta(v.eta)) &&
+  (v.student_location === null ||
+    (isObj(v.student_location) && v.student_location.source === "synthetic")) &&
+  ((v.status === "assigned" && DECISIONS.includes(String(v.decision)) && isStr(v.reason)) ||
+    (v.status === "unassigned" && v.decision === null));

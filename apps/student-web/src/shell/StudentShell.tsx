@@ -7,12 +7,7 @@ import { useNetwork, type Network } from "../data/network";
 import { useLiveFleet } from "../data/liveFleet";
 import type { BusView } from "../features/dashboard/BusList";
 import { DashboardPanel, type DashboardData } from "../features/dashboard/DashboardPanel";
-import {
-  assumedWalkMin,
-  dashboardAlerts,
-  decide,
-  otherArrivals,
-} from "../features/dashboard/interim";
+import { dashboardAlerts, otherArrivals } from "../features/dashboard/interim";
 import { MyBusPanel } from "../features/mybus/MyBusPanel";
 import { RoutesPanel } from "../features/routes/RoutesPanel";
 import { StopsPanel } from "../features/stops/StopsPanel";
@@ -56,16 +51,13 @@ export function StudentShell({ me, onLogout }: Props) {
   const data = useMemo<DashboardData>(() => {
     const arrivals = fleet.arrivals;
     if (!arrivals || arrivals.status !== "assigned") {
-      return { decision: null, atMyStop: [], alerts: [] };
+      return { atMyStop: [], alerts: [] };
     }
-    const walk = assumedWalkMin(me.id);
-    const decision = decide(arrivals, walk);
     return {
-      decision,
       atMyStop: otherArrivals(arrivals), // backend ETA order
-      alerts: dashboardAlerts(arrivals, decision, fleet.options, fleet.buses ?? []),
+      alerts: dashboardAlerts(arrivals, fleet.commute, fleet.options, fleet.buses ?? []),
     };
-  }, [fleet.arrivals, fleet.options, fleet.buses, me.id]);
+  }, [fleet.arrivals, fleet.commute, fleet.options, fleet.buses]);
 
   const paused = fleet.sim?.paused ?? false;
   // Map markers: backend coordinates; highlight my bus and buses the BACKEND says serve my stop.
