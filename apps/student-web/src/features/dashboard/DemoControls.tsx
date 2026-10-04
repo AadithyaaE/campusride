@@ -1,6 +1,6 @@
 import type { SimStatusOut } from "../../api/types";
 import type { LiveFleet } from "../../data/liveFleet";
-import { POLL_MS } from "../../data/liveFleet";
+import { FALLBACK_POLL_MS } from "../../data/liveFleet";
 import { formatCampusTime } from "../../lib/format";
 
 /**
@@ -8,18 +8,32 @@ import { formatCampusTime } from "../../lib/format";
  * Never touches the student's assignment. Hidden when the backend says the
  * caller may not control the simulation (outside development).
  */
+const FEED_TEXT: Record<LiveFleet["realtime"], string> = {
+  live: "Live · real-time updates",
+  connecting: "Connecting to live updates…",
+  offline: `Live updates reconnecting · checking every ${FALLBACK_POLL_MS / 1000} s`,
+};
+
 export function DemoControls({
   sim,
   control,
+  realtime = "live",
 }: {
   sim: SimStatusOut | null;
   control: LiveFleet["control"];
+  realtime?: LiveFleet["realtime"];
 }) {
+  const feed = (
+    <p className={`feed-status feed-${realtime}`} role="status" aria-label="Live updates">
+      {FEED_TEXT[realtime]}
+    </p>
+  );
   if (!sim || !sim.enabled) {
     return (
       <section className="demo-controls" aria-label="Demo mode">
         <h3 className="section-title">Simulated live tracking</h3>
         <p className="footnote">The backend simulator is not enabled.</p>
+        {feed}
       </section>
     );
   }
@@ -72,9 +86,11 @@ export function DemoControls({
       )}
       <p className="footnote">
         Bus positions, status, occupancy, delays and ETAs come from the backend (synthetic
-        simulator, no real GPS). This page refreshes them every {POLL_MS / 1000} s; countdowns tick
-        between refreshes. “Will I make my bus?” and alerts are interim rules.
+        simulator, no real GPS). The backend pushes every change in real time (WebSocket); if the
+        connection drops this page re-checks every {FALLBACK_POLL_MS / 1000} s. Countdowns tick
+        between updates. “Will I make my bus?” and alerts are interim rules.
       </p>
+      {feed}
     </section>
   );
 }

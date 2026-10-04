@@ -2,7 +2,8 @@
 
 Now: health, auth, stops, routes, buses (fleet + live state), driver telemetry,
 sim (dev/demo controls), students (read-only college-assigned bus), boarding
-(QR scan, trip boarding). Later
+(QR scan, trip boarding), alerts, admin (Feature 13 dashboard, read-only),
+ws (Feature 14 real-time push). Later
 phases add trips, eta, decision, recovery, boarding, driver,
 alerts, admin (incl. assignment management), sim and the /ws WebSocket —
 each as its own module registered here.
@@ -10,7 +11,7 @@ each as its own module registered here.
 
 from fastapi import APIRouter
 
-from app.api.v1 import alerts, auth, boarding, buses, driver, health, routes, sim, stops, students
+from app.api.v1 import admin, alerts, auth, boarding, buses, driver, health, routes, sim, stops, students, ws
 
 api_router = APIRouter()
 api_router.include_router(health.router)
@@ -23,3 +24,5 @@ api_router.include_router(sim.router)
 api_router.include_router(students.router)
 api_router.include_router(boarding.router)
 api_router.include_router(alerts.router)
+api_router.include_router(admin.router)
+api_router.include_router(ws.router)

@@ -8,6 +8,7 @@ import type {
   BusOptionOut,
   BusOptionsOut,
   CommuteDecisionOut,
+  Alert,
   RecoveryOptionOut,
   RecoveryOut,
   BoardingScanOut,
@@ -743,3 +744,62 @@ export const recoveryNotNeeded: RecoveryOut = recovery({
   recommended: null,
   alternatives: [],
 });
+
+/** A FAKE backend alert (as `GET /alerts` returns it for the signed-in student). */
+export function alert(type: Alert["type"], message: string, over: Partial<Alert> = {}): Alert {
+  const titles: Record<string, string> = {
+    BUS_APPROACHING: "BUS APPROACHING",
+    BUS_DELAYED: "BUS DELAYED",
+    CAPACITY_WARNING: "CAPACITY WARNING",
+    ROUTE_DEVIATION: "ROUTE DEVIATION",
+    MISSED_BUS: "MISSED BUS",
+    ALTERNATIVE_BUS_AVAILABLE: "ALTERNATIVE AVAILABLE",
+  };
+  const id = over.alert_id ?? `ALT-${type}-S-${me.id}-BX7-T-TEST-T2-1`;
+  const ts = over.timestamp ?? "2030-01-07T01:46:00Z";
+  return {
+    alert_id: id,
+    id,
+    type,
+    title: titles[type] ?? type,
+    message,
+    body: message,
+    bus_id: "BX7",
+    trip_id: "T-TEST-T2",
+    route_id: "T2",
+    student_id: me.id,
+    admin_id: null,
+    recipient: "student",
+    severity: "info",
+    timestamp: ts,
+    created_at: ts,
+    updated_at: null,
+    read: false,
+    resolved_at: null,
+    active: true,
+    payload: {},
+    ...over,
+  };
+}
+
+/** Fake `GET /alerts`: three of the student's own alerts, newest first (2 unread). */
+export const myAlerts: Alert[] = [
+  alert("BUS_APPROACHING", "Bus BX7 reaches your stop (Test Stop B) in 3 minutes.", {
+    timestamp: "2030-01-07T01:48:00Z",
+  }),
+  alert("BUS_DELAYED", "Bus BX7 is running 8 minutes late.", {
+    alert_id: "ALT-BUS_DELAYED-S-U-T1-BX7-T-TEST-T2-1",
+    severity: "warning",
+    timestamp: "2030-01-07T01:42:00Z",
+  }),
+  alert(
+    "ALTERNATIVE_BUS_AVAILABLE",
+    "Bus BX8 serves your stop and gives you a 5-minute safety buffer.",
+    {
+      alert_id: "ALT-ALTERNATIVE_BUS_AVAILABLE-S-U-T1-BX7-T-TEST-T2-1",
+      bus_id: "BX8",
+      read: true,
+      timestamp: "2030-01-07T01:38:00Z",
+    },
+  ),
+];

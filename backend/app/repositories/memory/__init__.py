@@ -212,7 +212,74 @@ class MemoryDeviationRepository(MemoryRepository[Deviation]):
 class MemoryAlertRepository(MemoryRepository[Alert]):
     async def recent(self, limit: int = 100) -> list[Alert]:
         alerts = await self.list(limit=100_000)
-        return sorted(alerts, key=lambda a: a.created_at, reverse=True)[:limit]
+        return sorted(alerts, key=lambda a: (a.created_at, a.id), reverse=True)[:limit]
+
+    async def insert_once(self, alert: Alert) -> bool:
+        # check-and-set without an await → atomic on the event loop (mirrors Mongo's indexes)
+        if alert.id in self._docs:
+            return False
+        if (
+            alert.active
+            and alert.dedup_key is not None
+            and any(d.get("dedup_key") == alert.dedup_key and d.get("active") for d in self._docs.values())
+        ):
+            return False
+        self._docs[alert.id] = alert.to_mongo()
+        return True
+
+    async def active_in_series(self, dedup_key: str) -> Alert | None:
+        found = await self.list(filter={"dedup_key": dedup_key, "active": True}, limit=1)
+        return found[0] if found else None
+
+    async def count_series(self, dedup_key: str) -> int:
+        return await self.count(filter={"dedup_key": dedup_key})
+
+    async def active_for_bus(self, bus_id: str, types: Sequence[str]) -> list[Alert]:
+        found = await self.list(filter={"bus_id": bus_id, "active": True}, limit=100_000)
+        return [a for a in found if a.type.value in set(types)]
+
+    async def active_keys(self, prefix_types: Sequence[str]) -> set[str]:
+        return {
+            d["dedup_key"]
+            for d in self._docs.values()
+            if d.get("active") and d.get("dedup_key") and d.get("type") in set(prefix_types)
+        }
+
+    async def series_keys(self, prefix_types: Sequence[str]) -> set[str]:
+        return {
+            d["dedup_key"]
+            for d in self._docs.values()
+            if d.get("dedup_key") and d.get("type") in set(prefix_types)
+        }
+
+    async def for_recipient(
+        self,
+        *,
+        user_id: str | None = None,
+        role: str | None = None,
+        active: bool | None = None,
+        unread: bool | None = None,
+        limit: int = 50,
+    ) -> list[Alert]:
+        out = []
+        for d in self._docs.values():
+            aud = d.get("audience") or {}
+            if user_id is not None and aud.get("user_id") != user_id:
+                continue
+            if role is not None and aud.get("role") != role:
+                continue
+            if active is not None and bool(d.get("active")) != active:
+                continue
+            if unread is not None and (not d.get("read")) != unread:
+                continue
+            out.append(self._load(d))
+        return sorted(out, key=lambda a: (a.created_at, a.id), reverse=True)[:limit]
+
+    async def delete_for_buses(self, bus_ids: Sequence[str]) -> int:
+        doomed = [k for k, d in self._docs.items() if d.get("bus_id") in set(bus_ids)]
+        for k in doomed:
+            del self._docs[k]
+        return len(doomed)
 
 
 def memory_repositories() -> Repositories:

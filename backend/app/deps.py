@@ -20,7 +20,12 @@ from app.core.db import Database
 from app.core.errors import AuthError, ForbiddenError
 from app.core.events import EventBus
 from app.models.common import Role
+from app.models.events import BusStateUpdated
+from app.realtime.hub import RealtimeHub
 from app.repositories import Repositories
+from app.services.admin_service import AdminService
+from app.services.alert_monitor import AlertMonitor
+from app.services.alert_service import AlertService
 from app.services.boarding_service import BoardingService
 from app.services.bus_comparison_service import BusComparisonService
 from app.services.bus_simulator import BusSimulator
@@ -28,6 +33,7 @@ from app.services.commute_decision_service import CommuteDecisionService
 from app.services.eta_service import EtaService
 from app.services.matching import MatchingService
 from app.services.missed_bus_service import MissedBusService
+from app.services.ridership import RidershipLedger
 from app.services.route_anomaly_service import RouteAnomalyService
 from app.services.student_location import StudentLocationSource
 from app.services.tracking import TelemetryIngestService
@@ -52,6 +58,22 @@ class AppContainer:
     commute_service: CommuteDecisionService | None = None
     boarding_service: BoardingService | None = None
     recovery_service: MissedBusService | None = None
+    alert_monitor_service: AlertMonitor | None = None
+    ridership_ledger: RidershipLedger | None = None
+    """Feature 13 — per-trip peak load, fed by the ingest pipeline's BusStateUpdated events."""
+    admin_service: AdminService | None = None
+    realtime_hub: RealtimeHub | None = None
+    """Feature 14 — EventBus → WebSocket push (subscribed when the container is created)."""
+
+    def __post_init__(self) -> None:
+        # Subscribe before anything publishes, so no state change is missed by live clients.
+        self.realtime()
+
+    def realtime(self) -> RealtimeHub:
+        if self.realtime_hub is None:
+            self.realtime_hub = RealtimeHub(self)
+            self.realtime_hub.attach()
+        return self.realtime_hub
 
     def matching(self) -> MatchingService:
         """Stop ↔ bus matching (caches static route data for the app's lifetime)."""
@@ -97,6 +119,18 @@ class AppContainer:
             )
         return self.boarding_service
 
+    def alerts(self) -> AlertService:
+        """Feature 11 — the ONE alert service (shared with the telemetry pipeline)."""
+        return self.telemetry_ingest().alerts
+
+    def alert_monitor(self) -> AlertMonitor:
+        """Feature 11 — periodic student-alert sweep (approaching / missed / alternative)."""
+        if self.alert_monitor_service is None:
+            self.alert_monitor_service = AlertMonitor(
+                self.alerts(), self.recovery(), self.repos, self.clock, self.settings
+            )
+        return self.alert_monitor_service
+
     def route_anomaly(self) -> RouteAnomalyService:
         """Feature 10 — the SAME instance the telemetry pipeline uses for transitions."""
         return self.telemetry_ingest().anomaly
@@ -104,7 +138,31 @@ class AppContainer:
     def telemetry_ingest(self) -> TelemetryIngestService:
         if self.ingest is None:
             self.ingest = TelemetryIngestService(self.repos, self.events, self.clock, self.settings)
+            self.ridership_ledger = RidershipLedger()
+            self.events.subscribe(
+                BusStateUpdated, self.ridership_ledger.on_bus_state, name=f"ridership.bus_state.{id(self)}"
+            )
         return self.ingest
+
+    def ridership(self) -> RidershipLedger:
+        self.telemetry_ingest()
+        assert self.ridership_ledger is not None
+        return self.ridership_ledger
+
+    def admin(self) -> AdminService:
+        """Feature 13 — admin dashboard read models over the existing services."""
+        if self.admin_service is None:
+            self.admin_service = AdminService(
+                self.repos,
+                self.settings,
+                self.clock,
+                self.matching(),
+                self.eta(),
+                self.alerts(),
+                self.ridership(),
+                self.simulator,
+            )
+        return self.admin_service
 
 
 def get_container(request: Request) -> AppContainer:

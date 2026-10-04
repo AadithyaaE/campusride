@@ -248,6 +248,29 @@ describe("ApiClient", () => {
     expect(mine.my_bus?.bus_id).toBe("BX7");
   });
 
+  it("validates in-app alerts and mark-read (Feature 11)", async () => {
+    const calls: string[] = [];
+    const api = makeClient(async (input, init) => {
+      const u = new URL(String(input));
+      calls.push(`${init?.method ?? "GET"} ${u.pathname}${u.search}`);
+      return u.pathname.endsWith("/read")
+        ? json({ ...fx.myAlerts[0], read: true })
+        : json(fx.myAlerts);
+    });
+    expect((await api.alerts({ unread: true, limit: 5 })).map((a) => a.type)).toEqual([
+      "BUS_APPROACHING",
+      "BUS_DELAYED",
+      "ALTERNATIVE_BUS_AVAILABLE",
+    ]);
+    expect((await api.markAlertRead("ALT-1")).read).toBe(true);
+    expect(calls).toEqual([
+      "GET /api/v1/alerts?unread=true&limit=5",
+      "PATCH /api/v1/alerts/ALT-1/read",
+    ]);
+    const bad = makeClient(async () => json([{ ...fx.myAlerts[0], type: "MADE_UP" }]));
+    await expect(bad.alerts()).rejects.toBeInstanceOf(MalformedResponseError);
+  });
+
   it("validates missed-bus recovery responses (Feature 9)", async () => {
     const ok = await makeClient(async () => json(fx.recovery())).myRecoveryOptions();
     expect(ok.recommended?.bus_id).toBe("BX8");

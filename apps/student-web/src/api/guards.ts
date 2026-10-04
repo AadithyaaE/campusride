@@ -21,6 +21,7 @@ import type {
   RecoveryOptionOut,
   RecoveryOut,
   RouteStatusResponse,
+  Alert,
   EtaPredictionOut,
   MyArrivalsOut,
   StopArrivalsOut,
@@ -397,3 +398,26 @@ export const isRouteStatus: Guard<RouteStatusResponse> = (v): v is RouteStatusRe
       isNum(v.current_location.lat) &&
       isNum(v.current_location.lon))) &&
   isStr(v.evaluated_at);
+
+const ALERT_TYPES = [
+  "BUS_APPROACHING",
+  "BUS_DELAYED",
+  "CAPACITY_WARNING",
+  "ROUTE_DEVIATION",
+  "MISSED_BUS",
+  "ALTERNATIVE_BUS_AVAILABLE",
+  "BREAKDOWN",
+  "BROADCAST",
+];
+
+export const isAlert: Guard<Alert> = (v): v is Alert =>
+  isObj(v) &&
+  isStr(v.alert_id) &&
+  ALERT_TYPES.includes(String(v.type)) &&
+  isStr(v.title) &&
+  isStr(v.message) &&
+  ["info", "warning", "critical"].includes(String(v.severity)) &&
+  isStr(v.timestamp) &&
+  isBool(v.read) &&
+  isBool(v.active) &&
+  (v.recipient === "student" || v.recipient === "admin");

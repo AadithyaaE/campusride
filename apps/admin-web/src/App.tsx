@@ -1,12 +1,13 @@
 /**
- * CampusRide admin dashboard (prototype). Mock login → admins only → live fleet occupancy.
- * Everything shown comes from the backend; this app keeps no transport state of its own.
+ * CampusRide admin dashboard (prototype). Mock login → admins only → transport control
+ * room (Feature 13). Everything shown comes from the backend; this app keeps no transport
+ * state of its own.
  */
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 
 import { AdminApi, ApiError, type MeOut } from "./api/client";
 import { config } from "./config";
-import { FleetOccupancy } from "./FleetOccupancy";
+import { ControlRoom } from "./dashboard/ControlRoom";
 
 const SESSION_KEY = "campusride.admin.session";
 
@@ -77,7 +78,9 @@ export function App({ fetchImpl, storage = window.localStorage }: Props) {
   return (
     <div className="app">
       <header className="topbar">
-        <strong className="brand">CampusRide · Admin</strong>
+        <strong className="brand">
+          CampusRide <span className="brand-sub">Transport Control</span>
+        </strong>
         {session && (
           <span className="who">
             {session.name}{" "}
@@ -87,8 +90,8 @@ export function App({ fetchImpl, storage = window.localStorage }: Props) {
           </span>
         )}
       </header>
-      <main className="main">
-        {session ? <FleetOccupancy api={api} /> : <Login onLogin={login} />}
+      <main className={session ? "main main-wide" : "main"}>
+        {session ? <ControlRoom api={api} /> : <Login onLogin={login} />}
       </main>
     </div>
   );

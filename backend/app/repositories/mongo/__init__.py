@@ -218,7 +218,58 @@ class MongoDeviationRepository(MongoRepository[Deviation]):
 
 class MongoAlertRepository(MongoRepository[Alert]):
     async def recent(self, limit: int = 100) -> list[Alert]:
-        return await self._find_sorted({}, [("created_at", DESCENDING)], limit=limit)
+        return await self._find_sorted({}, [("created_at", DESCENDING), ("_id", DESCENDING)], limit=limit)
+
+    async def insert_once(self, alert: Alert) -> bool:
+        try:
+            await self._coll.insert_one(alert.to_mongo())
+        except DuplicateKeyError:  # same id, or the series already has an active alert
+            return False
+        return True
+
+    async def active_in_series(self, dedup_key: str) -> Alert | None:
+        raw = await self._coll.find_one({"dedup_key": dedup_key, "active": True})
+        return None if raw is None else self._model.from_mongo(raw)
+
+    async def count_series(self, dedup_key: str) -> int:
+        return await self._coll.count_documents({"dedup_key": dedup_key})
+
+    async def active_for_bus(self, bus_id: str, types: Sequence[str]) -> list[Alert]:
+        return await self._find_sorted(
+            {"bus_id": bus_id, "active": True, "type": {"$in": list(types)}}, [("created_at", ASCENDING)]
+        )
+
+    async def active_keys(self, prefix_types: Sequence[str]) -> set[str]:
+        keys = await self._coll.distinct("dedup_key", {"active": True, "type": {"$in": list(prefix_types)}})
+        return {k for k in keys if k}
+
+    async def series_keys(self, prefix_types: Sequence[str]) -> set[str]:
+        keys = await self._coll.distinct("dedup_key", {"type": {"$in": list(prefix_types)}})
+        return {k for k in keys if k}
+
+    async def for_recipient(
+        self,
+        *,
+        user_id: str | None = None,
+        role: str | None = None,
+        active: bool | None = None,
+        unread: bool | None = None,
+        limit: int = 50,
+    ) -> list[Alert]:
+        flt: dict = {}
+        if user_id is not None:
+            flt["audience.user_id"] = user_id
+        if role is not None:
+            flt["audience.role"] = role
+        if active is not None:
+            flt["active"] = active
+        if unread is not None:
+            flt["read"] = not unread
+        return await self._find_sorted(flt, [("created_at", DESCENDING), ("_id", DESCENDING)], limit=limit)
+
+    async def delete_for_buses(self, bus_ids: Sequence[str]) -> int:
+        res = await self._coll.delete_many({"bus_id": {"$in": list(bus_ids)}})
+        return res.deleted_count
 
 
 def mongo_repositories(db: AsyncIOMotorDatabase) -> Repositories:

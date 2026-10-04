@@ -7,7 +7,7 @@ import { useNetwork, type Network } from "../data/network";
 import { useLiveFleet } from "../data/liveFleet";
 import type { BusView } from "../features/dashboard/BusList";
 import { DashboardPanel, type DashboardData } from "../features/dashboard/DashboardPanel";
-import { dashboardAlerts, otherArrivals } from "../features/dashboard/interim";
+import { otherArrivals } from "../features/dashboard/interim";
 import { MyBusPanel } from "../features/mybus/MyBusPanel";
 import { RoutesPanel } from "../features/routes/RoutesPanel";
 import { StopsPanel } from "../features/stops/StopsPanel";
@@ -51,13 +51,12 @@ export function StudentShell({ me, onLogout }: Props) {
   const data = useMemo<DashboardData>(() => {
     const arrivals = fleet.arrivals;
     if (!arrivals || arrivals.status !== "assigned") {
-      return { atMyStop: [], alerts: [] };
+      return { atMyStop: [] };
     }
     return {
       atMyStop: otherArrivals(arrivals), // backend ETA order
-      alerts: dashboardAlerts(arrivals, fleet.commute, fleet.recovery, fleet.buses ?? []),
     };
-  }, [fleet.arrivals, fleet.commute, fleet.recovery, fleet.buses]);
+  }, [fleet.arrivals]);
 
   const paused = fleet.sim?.paused ?? false;
   // Map markers: backend coordinates; highlight my bus and buses the BACKEND says serve my stop.
@@ -103,7 +102,7 @@ export function StudentShell({ me, onLogout }: Props) {
         me={me}
         health={health}
         boardingStopName={myAssignment?.boarding_stop.name ?? null}
-        alertCount={data.alerts.length}
+        alertCount={(fleet.alerts ?? []).filter((x) => !x.read).length}
         onOpenAlerts={() => openSection("alerts")}
         onLogout={onLogout}
       />

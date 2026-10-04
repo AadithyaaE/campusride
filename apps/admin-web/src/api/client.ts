@@ -19,6 +19,17 @@ export type RouteStatusResponse = Schemas["RouteStatusOut"];
 export type RouteDeviationDemoMode = Schemas["RouteDeviationIn"]["mode"];
 export type AlertOut = Schemas["AlertOut"];
 export type SimStatusOut = Schemas["SimStatusOut"];
+// Feature 13 — transport admin dashboard (/admin/*)
+export type AdminOverview = Schemas["AdminOverviewOut"];
+export type AdminFleet = Schemas["AdminFleetOut"];
+export type FleetBus = Schemas["AdminFleetBusOut"];
+export type OperationalStatus = FleetBus["operational_status"];
+export type AdminRoute = Schemas["AdminRouteOut"];
+export type AdminSchedule = Schemas["AdminScheduleOut"];
+export type ScheduleTrip = Schemas["ScheduleTripOut"];
+export type AdminAnalytics = Schemas["AdminAnalyticsOut"];
+export type LabelValue = Schemas["LabelValueOut"];
+export type RouteDetail = Schemas["RouteDetailOut"];
 
 export class ApiError extends Error {
   readonly status: number;
@@ -78,9 +89,55 @@ const isRouteStatus: Guard<RouteStatusResponse> = (v): v is RouteStatusResponse 
   (v.current_location === null || isLatLon(v.current_location)) &&
   (v.nearest_route_point === null || isLatLon(v.nearest_route_point));
 const isAlert: Guard<AlertOut> = (v): v is AlertOut =>
-  isObj(v) && isStr(v.id) && isStr(v.body) && typeof v.active === "boolean";
+  isObj(v) &&
+  isStr(v.alert_id) &&
+  isStr(v.type) &&
+  isStr(v.title) &&
+  isStr(v.message) &&
+  isStr(v.timestamp) &&
+  typeof v.read === "boolean" &&
+  typeof v.active === "boolean" &&
+  (v.recipient === "admin" || v.recipient === "student");
 const isSimStatus: Guard<SimStatusOut> = (v): v is SimStatusOut =>
   isObj(v) && typeof v.enabled === "boolean" && isObj(v.route_deviation);
+const isArr = Array.isArray;
+const isOverview: Guard<AdminOverview> = (v): v is AdminOverview =>
+  isObj(v) &&
+  isInt(v.total_buses) &&
+  isInt(v.active_trips) &&
+  isInt(v.students) &&
+  isInt(v.passengers_today) &&
+  isObj(v.trips_today) &&
+  isObj(v.alerts);
+const isFleetBus: Guard<FleetBus> = (v): v is FleetBus =>
+  isObj(v) &&
+  isStr(v.bus_id) &&
+  isStr(v.route_id) &&
+  isStr(v.operational_status) &&
+  isInt(v.capacity) &&
+  (v.occupancy === null || isInt(v.occupancy)) &&
+  (v.location === null || isLatLon(v.location)) &&
+  isArr(v.active_alerts);
+const isFleet: Guard<AdminFleet> = (v): v is AdminFleet =>
+  isObj(v) && arrayOf(isFleetBus)(v.buses) && isObj(v.options) && isStr(v.sim_time);
+const isAdminRoute: Guard<AdminRoute> = (v): v is AdminRoute =>
+  isObj(v) && isStr(v.id) && isArr(v.directions) && isArr(v.active_buses) && isObj(v.trips_today);
+const isScheduleTrip = (v: unknown): v is ScheduleTrip =>
+  isObj(v) &&
+  isStr(v.trip_id) &&
+  isStr(v.bus_id) &&
+  isStr(v.scheduled_departure) &&
+  isStr(v.status);
+const isSchedule: Guard<AdminSchedule> = (v): v is AdminSchedule =>
+  isObj(v) && isStr(v.service_date) && arrayOf(isScheduleTrip)(v.trips);
+const isAnalytics: Guard<AdminAnalytics> = (v): v is AdminAnalytics =>
+  isObj(v) &&
+  isObj(v.live) &&
+  isObj(v.synthetic) &&
+  v.synthetic.synthetic === true &&
+  isArr(v.live.passengers_per_route);
+const isRouteDetail: Guard<RouteDetail> = (v): v is RouteDetail =>
+  isObj(v) && isStr(v.id) && isObj(v.path) && isArr(v.path.coordinates) && isArr(v.directions);
 const isTripBoarding: Guard<TripBoardingOut> = (v): v is TripBoardingOut =>
   isObj(v) && isStr(v.trip_id) && isInt(v.total_boarded) && arrayOf(isEvent)(v.events);
 
@@ -102,6 +159,15 @@ export class AdminApi {
     this.getToken = opts.getToken ?? (() => null);
     this.onUnauthorized = opts.onUnauthorized;
     this.fetchImpl = opts.fetchImpl ?? ((...args) => globalThis.fetch(...args));
+  }
+
+  /** Feature 14: the WebSocket endpoint next to this REST base URL, and the current token. */
+  realtimeUrl(): string {
+    return `${this.baseUrl.replace(/^http/, "ws")}/ws`;
+  }
+
+  token(): string | null {
+    return this.getToken();
   }
 
   mockLogin(email: string): Promise<TokenOut> {
@@ -140,13 +206,56 @@ export class AdminApi {
     );
   }
 
-  alerts(activeOnly = true): Promise<AlertOut[]> {
-    return this.request(`/alerts${activeOnly ? "?active=true" : ""}`, {}, arrayOf(isAlert));
+  /** Fleet/operational alerts (Feature 11; the backend never returns students' personal ones).
+   * `true` → active only, `false` → resolved only, `null` → both. */
+  alerts(active: boolean | null = true): Promise<AlertOut[]> {
+    const q = active === null ? "" : `?active=${active}`;
+    return this.request(`/alerts${q}`, {}, arrayOf(isAlert));
+  }
+
+  markAlertRead(alertId: string): Promise<AlertOut> {
+    return this.request(
+      `/alerts/${encodeURIComponent(alertId)}/read`,
+      { method: "PATCH" },
+      isAlert,
+    );
+  }
+
+  // ---------------------------------------------------------- Feature 13 (admin only)
+
+  /** KPIs: buses, trips, students, passengers today, delays, deviations, alert counts. */
+  adminOverview(): Promise<AdminOverview> {
+    return this.request("/admin/overview", {}, isOverview);
+  }
+
+  /** Every bus as the backend sees it (ETA, occupancy, delay, route status, alerts). */
+  adminFleet(): Promise<AdminFleet> {
+    return this.request("/admin/fleet", {}, isFleet);
+  }
+
+  /** Routes with today's operational aggregates (read-only). */
+  adminRoutes(): Promise<AdminRoute[]> {
+    return this.request("/admin/routes", {}, arrayOf(isAdminRoute));
+  }
+
+  /** Today's trips with assigned bus and driver (read-only). */
+  adminSchedule(): Promise<AdminSchedule> {
+    return this.request("/admin/schedule", {}, isSchedule);
+  }
+
+  /** Live aggregates + a separate block of labelled synthetic demo history. */
+  adminAnalytics(): Promise<AdminAnalytics> {
+    return this.request("/admin/analytics", {}, isAnalytics);
+  }
+
+  /** Route geometry and ordered stops of both directions (reference data). */
+  routeDetail(routeId: string): Promise<RouteDetail> {
+    return this.request(`/routes/${encodeURIComponent(routeId)}`, {}, isRouteDetail);
   }
 
   private async request<T>(
     path: string,
-    opts: { method?: "GET" | "POST"; body?: unknown; auth?: boolean },
+    opts: { method?: "GET" | "POST" | "PATCH"; body?: unknown; auth?: boolean },
     guard: Guard<T>,
   ): Promise<T> {
     const headers: Record<string, string> = { Accept: "application/json" };

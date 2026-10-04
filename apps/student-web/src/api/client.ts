@@ -24,6 +24,7 @@ import {
   isTripBoarding,
   isRecovery,
   isRouteStatus,
+  isAlert,
   isBusDetail,
   isMe,
   isMyArrivals,
@@ -51,6 +52,8 @@ import type {
   TripBoardingOut,
   RecoveryOut,
   RouteStatusResponse,
+  Alert,
+  AlertsResponse,
   MyArrivalsOut,
   StopArrivalsOut,
   BusDetailOut,
@@ -115,7 +118,7 @@ export interface ApiClientOptions {
 }
 
 interface RequestOptions<T> {
-  method?: "GET" | "POST" | "PUT";
+  method?: "GET" | "POST" | "PUT" | "PATCH";
   body?: unknown;
   auth?: boolean;
   query?: Record<string, string | number>;
@@ -135,6 +138,15 @@ export class ApiClient {
     this.onUnauthorized = opts.onUnauthorized;
     this.fetchImpl = opts.fetchImpl ?? ((...args) => globalThis.fetch(...args));
     this.timeoutMs = opts.timeoutMs ?? 10_000;
+  }
+
+  /** Feature 14: the WebSocket endpoint next to this REST base URL, and the current token. */
+  realtimeUrl(): string {
+    return `${this.baseUrl.replace(/^http/, "ws")}/ws`;
+  }
+
+  token(): string | null {
+    return this.getToken();
   }
 
   // ------------------------------------------------------------------ endpoints
@@ -277,6 +289,25 @@ export class ApiClient {
   busRouteStatus(busId: string): Promise<RouteStatusResponse> {
     return this.request(`/buses/${encodeURIComponent(busId)}/route-status`, {
       guard: isRouteStatus,
+    });
+  }
+
+  /** The signed-in user's own in-app alerts, newest first (Feature 11). */
+  alerts(
+    filter: { active?: boolean; unread?: boolean; limit?: number } = {},
+  ): Promise<AlertsResponse> {
+    const query: Record<string, string | number> = {};
+    if (filter.active !== undefined) query.active = String(filter.active);
+    if (filter.unread !== undefined) query.unread = String(filter.unread);
+    if (filter.limit !== undefined) query.limit = filter.limit;
+    return this.request("/alerts", { query, guard: arrayOf(isAlert) });
+  }
+
+  /** Mark one of MY alerts read (idempotent; the backend refuses other students' alerts). */
+  markAlertRead(alertId: string): Promise<Alert> {
+    return this.request(`/alerts/${encodeURIComponent(alertId)}/read`, {
+      method: "PATCH",
+      guard: isAlert,
     });
   }
 

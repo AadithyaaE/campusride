@@ -68,18 +68,22 @@ async def test_minor_and_major_via_simulator_controls(live_client, student_heade
     arrivals = (await client.get("/students/me/arrivals", headers=student_headers)).json()
     assert arrivals["my_bus"]["route_status"] == "MAJOR_DEVIATION"
 
-    alerts = (await client.get("/alerts", params={"active": True}, headers=admin)).json()
-    assert len(alerts) == 1 and alerts[0]["type"] == "deviation" and alerts[0]["active"] is True
+    async def deviation_alerts(**params):  # Feature 11: admins also see delay/capacity alerts
+        got = (await client.get("/alerts", params=params, headers=admin)).json()
+        return [a for a in got if a["type"] == "ROUTE_DEVIATION"]
+
+    alerts = await deviation_alerts(active=True)
+    assert len(alerts) == 1 and alerts[0]["type"] == "ROUTE_DEVIATION" and alerts[0]["active"] is True
     assert alerts[0]["payload"]["bus_id"] == "B05" and alerts[0]["severity"] == "critical"
     for _ in range(5):  # polling never creates alerts
         await _status(client, student_headers)
-    assert len((await client.get("/alerts", headers=admin)).json()) == 1
+    assert len(await deviation_alerts()) == 1
 
     await client.post("/sim/route-deviation", json={"mode": "normal", "bus_id": "B05"}, headers=admin)
     await advance(container, 30)
     assert (await _status(client, student_headers))["route_status"] == "NORMAL"
-    assert (await client.get("/alerts", params={"active": True}, headers=admin)).json() == []
-    resolved = (await client.get("/alerts", headers=admin)).json()
+    assert await deviation_alerts(active=True) == []
+    resolved = await deviation_alerts()
     assert resolved[0]["active"] is False and resolved[0]["resolved_at"]
 
 
@@ -117,7 +121,13 @@ async def test_simulator_control_permissions_and_validation(live_client, student
     assert r.status_code == 403
 
 
-async def test_alerts_are_admin_only(live_client, student_headers):
-    client, _ = live_client
-    assert (await client.get("/alerts", headers=student_headers)).status_code == 403
+async def test_fleet_alerts_are_admin_only(live_client, student_headers):
+    client, container = live_client
+    await advance(container, 5 * 60)
+    admin = await login(client, "admin1@campusride.demo")
+    await client.post("/sim/route-deviation", json={"mode": "major", "bus_id": "B05"}, headers=admin)
+    await advance(container, 30)
+    # Feature 11: students may read alerts, but only their OWN — never the fleet alert
+    mine = (await client.get("/alerts", headers=student_headers)).json()
+    assert all(a["recipient"] == "student" and a["student_id"] == "U-S0001" for a in mine)
     assert (await client.get("/alerts")).status_code == 401

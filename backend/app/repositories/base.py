@@ -163,6 +163,39 @@ class AlertRepository(Repository[Alert], Protocol):
         """Newest first."""
         ...
 
+    async def insert_once(self, alert: Alert) -> bool:
+        """Insert unless the id exists or the series (``dedup_key``) already has an ACTIVE alert.
+        Atomic (unique ``_id`` + unique partial index on active ``dedup_key``)."""
+        ...
+
+    async def active_in_series(self, dedup_key: str) -> Alert | None: ...
+
+    async def count_series(self, dedup_key: str) -> int: ...
+
+    async def active_for_bus(self, bus_id: str, types: Sequence[str]) -> list[Alert]: ...
+
+    async def active_keys(self, prefix_types: Sequence[str]) -> set[str]:
+        """``dedup_key`` of every active alert of these types (cache warm-up)."""
+        ...
+
+    async def series_keys(self, prefix_types: Sequence[str]) -> set[str]:
+        """``dedup_key`` of every alert (active or not) of these types."""
+        ...
+
+    async def for_recipient(
+        self,
+        *,
+        user_id: str | None = None,
+        role: str | None = None,
+        active: bool | None = None,
+        unread: bool | None = None,
+        limit: int = 50,
+    ) -> list[Alert]:
+        """Newest first, for one student (``user_id``) or a role (``role``)."""
+        ...
+
+    async def delete_for_buses(self, bus_ids: Sequence[str]) -> int: ...
+
 
 class TrafficProfileRepository(Repository[TrafficProfile], Protocol): ...
 

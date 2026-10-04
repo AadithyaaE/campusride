@@ -121,11 +121,16 @@ def _bus_out(b: Bus, state: BusState | None, c) -> dict:
     }
 
 
+def bus_out(b: Bus, state: BusState | None, c) -> BusOut:
+    """The ``GET /buses`` item for one bus (also pushed over the WebSocket, Feature 14)."""
+    return BusOut(**_bus_out(b, state, c))
+
+
 @router.get("/buses", response_model=list[BusOut])
 async def list_buses(_: CurrentPrincipal, c: Container) -> list[BusOut]:
     """The fleet with each bus's current (synthetic or device) live state."""
     states = {s.id: s for s in await c.repos.bus_states.list()}
-    return [BusOut(**_bus_out(b, states.get(b.id), c)) for b in await c.repos.buses.list()]
+    return [bus_out(b, states.get(b.id), c) for b in await c.repos.buses.list()]
 
 
 @router.get("/buses/{bus_id}", response_model=BusDetailOut)

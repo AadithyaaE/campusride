@@ -7,7 +7,7 @@
  *   (`GET /students/me/bus-options`) — polled, see data/liveFleet.ts.
  *   "Will I make my bus?" (`GET /students/me/commute-decision`) and missed-bus
  *   recovery (`GET /students/me/recovery-options`, suggestions only).
- * INTERIM (interim.ts): alerts —
+ * Alerts (`GET /alerts`, Feature 11) come from the backend AlertService.
  *   labelled as estimates until Phases 4/6 provide them from the backend.
  */
 import type { ReactNode } from "react";
@@ -22,7 +22,6 @@ import { AlertsList } from "./AlertsList";
 import { BusList, type BusView } from "./BusList";
 import { BusOptions } from "./BusOptions";
 import { DemoControls } from "./DemoControls";
-import type { DashboardAlert } from "./interim";
 import { DecisionCard, MyBusLiveCard } from "./LiveCards";
 import { QuickActions } from "./QuickActions";
 import { RecoveryCard } from "./RecoveryCard";
@@ -33,7 +32,6 @@ type Loadable<T> = AsyncState<T> & { reload: () => void };
 export interface DashboardData {
   /** Other buses serving the boarding stop, in the backend's ETA order. */
   atMyStop: ArrivalOut[];
-  alerts: DashboardAlert[];
 }
 
 interface Props {
@@ -71,7 +69,7 @@ export function DashboardPanel(props: Props) {
   }
 
   const a = assignment.data.assignment;
-  const demo = <DemoControls sim={fleet.sim} control={fleet.control} />;
+  const demo = <DemoControls sim={fleet.sim} control={fleet.control} realtime={fleet.realtime} />;
 
   if (a === null) {
     return (
@@ -147,7 +145,11 @@ export function DashboardPanel(props: Props) {
             onViewAllBuses={props.onViewAllBuses}
             onViewRoute={() => props.onViewRoute(a.route.route_id)}
           />
-          <AlertsList alerts={data.alerts} />
+          <AlertsList
+            alerts={fleet.alerts ?? []}
+            nowIso={fleet.sim?.sim_time ?? null}
+            onMarkRead={(id) => void fleet.markAlertRead(id)}
+          />
           <BusList
             view={props.busView}
             onViewChange={props.onBusViewChange}

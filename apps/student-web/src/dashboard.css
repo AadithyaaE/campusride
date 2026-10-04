@@ -1071,3 +1071,84 @@
   font-weight: 600;
   font-size: 0.85rem;
 }
+
+/* ------------------------------------------------- in-app alerts (F11) */
+
+.unread-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+.alert.is-unread {
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+}
+.alert.is-unread .alert-title {
+  font-weight: 800;
+}
+.alert.is-read {
+  opacity: 0.8;
+}
+.alert.is-resolved .row-sub {
+  text-decoration: none;
+  color: var(--muted);
+}
+.alert-severity {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.alert-critical .alert-severity:first-of-type {
+  color: #991b1b;
+  border-color: #fecaca;
+}
+.alert-warning .alert-severity:first-of-type {
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+.alert-time {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.alert-read {
+  align-self: center;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+/* Feature 14 — live feed indicator */
+.feed-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted, #64748b);
+}
+.feed-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+.feed-live::before {
+  background: #22c55e;
+}
+.feed-offline::before {
+  background: #f59e0b;
+}

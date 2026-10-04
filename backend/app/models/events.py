@@ -16,7 +16,8 @@ OccupancyChanged           capacity                     alerts, realtime
 DeviationStarted/Ended     deviation                    alerts, realtime
 BreakdownReported          driver report                alerts, realtime
 DelayReported              driver report                alerts, realtime
-AlertCreated               alerts                       realtime
+AlertCreated/Updated/      alerts (Feature 11)          realtime (future WebSocket push)
+  Resolved/Read
 SimReset                   sim control                  every stateful module
 =========================  ===========================  ==================================
 """
@@ -158,6 +159,24 @@ class DelayReported(DomainEvent):
 class AlertCreated(DomainEvent):
     event_type: ClassVar[str] = "alert"
     alert: Alert
+
+
+class AlertUpdated(DomainEvent):
+    """An active alert's message/payload was refreshed in place (no new notification)."""
+
+    event_type: ClassVar[str] = "alert.updated"
+    alert: Alert
+
+
+class AlertResolved(DomainEvent):
+    event_type: ClassVar[str] = "alert.resolved"
+    alert: Alert
+
+
+class AlertRead(DomainEvent):
+    event_type: ClassVar[str] = "alert.read"
+    alert_id: str
+    user_id: str
 
 
 class SimReset(DomainEvent):

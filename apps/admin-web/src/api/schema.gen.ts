@@ -319,6 +319,106 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/driver/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Driver Me
+     * @description The driver's profile, assigned bus/route, current or next trip and live bus state.
+     */
+    get: operations["driver_me_api_v1_driver_me_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/driver/trip/start": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start Trip
+     * @description Start the driver's OWN next trip; the existing simulator then emits synthetic GPS.
+     */
+    post: operations["start_trip_api_v1_driver_trip_start_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/driver/trip/stop": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Stop Trip
+     * @description Finalize the driver's active trip where the bus is; its telemetry then stops.
+     */
+    post: operations["stop_trip_api_v1_driver_trip_stop_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/driver/simulate-gps": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Simulate Gps
+     * @description Demo control: one synthetic GPS fix for the driver's bus right now (same pipeline).
+     */
+    post: operations["simulate_gps_api_v1_driver_simulate_gps_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/driver/route": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Driver Route
+     * @description Ordered stops of the current/next trip with progress from the tracked state.
+     */
+    get: operations["driver_route_api_v1_driver_route_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/sim/status": {
     parameters: {
       query?: never;
@@ -694,9 +794,129 @@ export interface paths {
     };
     /**
      * List Alerts
-     * @description Most recent alerts first (created from backend state transitions, never from polling).
+     * @description Newest first. Students: only their own alerts. Admins: fleet/operational alerts.
      */
     get: operations["list_alerts_api_v1_alerts_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/alerts/{alert_id}/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Mark Alert Read
+     * @description Mark one alert read (idempotent). Alerts that aren't yours → 404 (nothing leaks).
+     */
+    patch: operations["mark_alert_read_api_v1_alerts__alert_id__read_patch"];
+    trace?: never;
+  };
+  "/api/v1/admin/overview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Overview
+     * @description KPIs: buses, trips, students, passengers today, delays, deviations, alert counts.
+     */
+    get: operations["overview_api_v1_admin_overview_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/fleet": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Fleet
+     * @description Every bus with position, speed, stops, ETA, delay, occupancy, route status and alerts.
+     */
+    get: operations["fleet_api_v1_admin_fleet_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/routes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Routes
+     * @description Routes with directions, stops summary and today's operational aggregates (read-only).
+     */
+    get: operations["routes_api_v1_admin_routes_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/schedule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Schedule
+     * @description Today's trips: departure, arrival, assigned bus and driver, status (read-only).
+     */
+    get: operations["schedule_api_v1_admin_schedule_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/analytics": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Analytics
+     * @description Live aggregates of today + a separate, labelled block of synthetic demo history.
+     */
+    get: operations["analytics_api_v1_admin_analytics_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -709,31 +929,329 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    /** AlertOut */
-    AlertOut: {
+    /** AdminAnalyticsOut */
+    AdminAnalyticsOut: {
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string;
+      /**
+       * Service Date
+       * Format: date
+       */
+      service_date: string;
+      live: components["schemas"]["LiveAnalyticsOut"];
+      synthetic: components["schemas"]["SyntheticAnalyticsOut"];
+    };
+    /**
+     * AdminFleetBusOut
+     * @description One bus row for the control room (table, map, active buses, occupancy, delays, deviations).
+     */
+    AdminFleetBusOut: {
+      /** Bus Id */
+      bus_id: string;
+      /** Reg No */
+      reg_no: string;
+      source: components["schemas"]["BusSource"];
+      fleet_status: components["schemas"]["FleetStatus"];
+      /** Route Id */
+      route_id: string;
+      /** Route Name */
+      route_name: string;
+      /** Route Color */
+      route_color: string;
+      driver: components["schemas"]["NamedRefOut"] | null;
+      /**
+       * Operational Status
+       * @enum {string}
+       */
+      operational_status:
+        | "active"
+        | "delayed"
+        | "deviated"
+        | "breakdown"
+        | "waiting"
+        | "completed"
+        | "idle"
+        | "out_of_service";
+      bus_status: components["schemas"]["BusStatus"] | null;
+      /** Trip Id */
+      trip_id: string | null;
+      trip_status: components["schemas"]["TripStatus"] | null;
+      /** Route Direction Id */
+      route_direction_id: string | null;
+      direction: components["schemas"]["Direction"] | null;
+      /** Direction Label */
+      direction_label: string | null;
+      location: components["schemas"]["LatLonOut"] | null;
+      /** Heading Deg */
+      heading_deg: number | null;
+      /** Speed Kmh */
+      speed_kmh: number | null;
+      current_stop: components["schemas"]["NamedRefOut"] | null;
+      next_stop: components["schemas"]["NamedRefOut"] | null;
+      /** Eta Next Stop Min */
+      eta_next_stop_min: number | null;
+      /** Eta Status */
+      eta_status: ("predicted" | "at_stop" | "passed" | "completed") | null;
+      /** Eta Confidence */
+      eta_confidence: ("high" | "medium" | "low") | null;
+      /** Delay S */
+      delay_s: number | null;
+      /** Delay Min */
+      delay_min: number | null;
+      /** Is Delayed */
+      is_delayed: boolean;
+      /** Occupancy */
+      occupancy: number | null;
+      /** Capacity */
+      capacity: number;
+      /** Available Seats */
+      available_seats: number | null;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
+      /**
+       * Crowding
+       * @enum {string}
+       */
+      crowding: "Low" | "Medium" | "High" | "Unknown";
+      /** Boarded Count */
+      boarded_count: number;
+      route_status: components["schemas"]["RouteStatus"] | null;
+      /** Deviation Distance M */
+      deviation_distance_m: number | null;
+      /** Route Progress */
+      route_progress: number | null;
+      /**
+       * Gps
+       * @enum {string}
+       */
+      gps: "LIVE" | "STALE" | "UNAVAILABLE";
+      /** Gps Age S */
+      gps_age_s: number | null;
+      /** Last Updated */
+      last_updated: string | null;
+      /** Active Alerts */
+      active_alerts: components["schemas"]["AlertRefOut"][];
+    };
+    /** AdminFleetOut */
+    AdminFleetOut: {
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string;
+      /**
+       * Sim Time
+       * Format: date-time
+       */
+      sim_time: string;
+      /** Filters */
+      filters: {
+        [key: string]: string | null;
+      };
+      /** Total */
+      total: number;
+      /** Buses */
+      buses: components["schemas"]["AdminFleetBusOut"][];
+      options: components["schemas"]["FleetFilterOptionsOut"];
+    };
+    /** AdminOverviewOut */
+    AdminOverviewOut: {
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string;
+      /**
+       * Sim Time
+       * Format: date-time
+       */
+      sim_time: string;
+      /**
+       * Service Date
+       * Format: date
+       */
+      service_date: string;
+      /** Simulation Paused */
+      simulation_paused: boolean | null;
+      /** Total Buses */
+      total_buses: number;
+      /** Buses In Service */
+      buses_in_service: number;
+      /** Buses On Trip */
+      buses_on_trip: number;
+      /** Active Trips */
+      active_trips: number;
+      trips_today: components["schemas"]["TripCountsOut"];
+      /** Students */
+      students: number;
+      /** Assigned Students */
+      assigned_students: number;
+      /** Passengers Today */
+      passengers_today: number;
+      /** Passengers Method */
+      passengers_method: string;
+      /** Qr Boardings Today */
+      qr_boardings_today: number;
+      /** Delayed Buses */
+      delayed_buses: number;
+      /** Deviated Buses */
+      deviated_buses: number;
+      /** Major Deviations */
+      major_deviations: number;
+      alerts: components["schemas"]["AlertCountsOut"];
+    };
+    /** AdminRouteDirectionOut */
+    AdminRouteDirectionOut: {
+      /** Variant Id */
+      variant_id: string;
+      direction: components["schemas"]["Direction"];
+      /** Label */
+      label: string;
+      /** Stop Count */
+      stop_count: number;
+      first_stop: components["schemas"]["NamedRefOut"];
+      last_stop: components["schemas"]["NamedRefOut"];
+      /** Scheduled Duration Min */
+      scheduled_duration_min: number;
+    };
+    /** AdminRouteOut */
+    AdminRouteOut: {
       /** Id */
       id: string;
-      /** Type */
-      type: string;
-      severity: components["schemas"]["Severity"];
+      /** Name */
+      name: string;
+      /** Color */
+      color: string;
+      /** Length Km */
+      length_km: number;
+      /** Directions */
+      directions: components["schemas"]["AdminRouteDirectionOut"][];
+      /** Assigned Buses */
+      assigned_buses: string[];
+      /** Active Buses */
+      active_buses: string[];
+      trips_today: components["schemas"]["TripCountsOut"];
+      /** Delayed Buses */
+      delayed_buses: string[];
+      /** Deviated Buses */
+      deviated_buses: string[];
+      /** Avg Occupancy Percentage */
+      avg_occupancy_percentage: number | null;
+      /** Passengers Today */
+      passengers_today: number;
+    };
+    /** AdminScheduleOut */
+    AdminScheduleOut: {
+      /**
+       * Service Date
+       * Format: date
+       */
+      service_date: string;
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string;
+      /** Trips */
+      trips: components["schemas"]["ScheduleTripOut"][];
+    };
+    /** AlertCountsOut */
+    AlertCountsOut: {
+      /** Active */
+      active: number;
+      /** Unread */
+      unread: number;
+      /** Critical */
+      critical: number;
+      /** Warning */
+      warning: number;
+      /** Info */
+      info: number;
+    };
+    /**
+     * AlertOut
+     * @description One in-app alert (Feature 11). ``id``/``body``/``created_at`` kept for Feature 10 clients.
+     */
+    AlertOut: {
+      /** Alert Id */
+      alert_id: string;
+      type: components["schemas"]["AlertType"];
       /** Title */
       title: string;
-      /** Body */
-      body: string;
+      /** Message */
+      message: string;
+      /** Bus Id */
+      bus_id: string | null;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Route Id */
+      route_id: string | null;
+      /** Student Id */
+      student_id: string | null;
+      /** Admin Id */
+      admin_id: string | null;
+      /**
+       * Recipient
+       * @enum {string}
+       */
+      recipient: "student" | "admin";
+      severity: components["schemas"]["Severity"];
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Updated At */
+      updated_at: string | null;
+      /** Read */
+      read: boolean;
+      /** Resolved At */
+      resolved_at: string | null;
+      /** Active */
+      active: boolean;
       /** Payload */
       payload: {
         [key: string]: unknown;
       };
+      /** Id */
+      id: string;
+      /** Body */
+      body: string;
       /**
        * Created At
        * Format: date-time
        */
       created_at: string;
-      /** Resolved At */
-      resolved_at: string | null;
-      /** Active */
-      active: boolean;
     };
+    /** AlertRefOut */
+    AlertRefOut: {
+      /** Alert Id */
+      alert_id: string;
+      /** Type */
+      type: string;
+      severity: components["schemas"]["Severity"];
+      /** Title */
+      title: string;
+      /** Message */
+      message: string;
+    };
+    /**
+     * AlertType
+     * @description Feature 11 in-app alert types (Feature 10's ``deviation`` is ROUTE_DEVIATION).
+     * @enum {string}
+     */
+    AlertType:
+      | "BUS_APPROACHING"
+      | "BUS_DELAYED"
+      | "CAPACITY_WARNING"
+      | "ROUTE_DEVIATION"
+      | "MISSED_BUS"
+      | "ALTERNATIVE_BUS_AVAILABLE"
+      | "BREAKDOWN"
+      | "BROADCAST";
     /**
      * ArrivalOut
      * @description A bus serving the stop (Feature 4 matching) + its backend ETA.
@@ -1266,6 +1784,15 @@ export interface components {
        */
       computed_at: string;
     };
+    /** DelaySummaryOut */
+    DelaySummaryOut: {
+      /** Buses Measured */
+      buses_measured: number;
+      /** Fleet Avg Delay Min */
+      fleet_avg_delay_min: number | null;
+      /** By Route */
+      by_route: components["schemas"]["LabelValueOut"][];
+    };
     /**
      * Direction
      * @enum {string}
@@ -1284,6 +1811,159 @@ export interface components {
       first_stop_id: string;
       /** Last Stop Id */
       last_stop_id: string;
+    };
+    /** DriverBusOut */
+    DriverBusOut: {
+      /** Id */
+      id: string;
+      /** Number */
+      number: string;
+      /** Reg No */
+      reg_no: string;
+      /** Capacity */
+      capacity: number;
+    };
+    /** DriverDashboardOut */
+    DriverDashboardOut: {
+      driver: components["schemas"]["DriverInfoOut"];
+      bus: components["schemas"]["DriverBusOut"] | null;
+      route: components["schemas"]["DriverRouteOut"] | null;
+      trip: components["schemas"]["DriverTripOut"] | null;
+      /**
+       * Trip State
+       * @enum {string}
+       */
+      trip_state: "READY" | "ACTIVE" | "COMPLETED" | "NO_TRIP" | "NO_ASSIGNMENT";
+      /**
+       * Control
+       * @enum {string}
+       */
+      control: "driver" | "schedule";
+      /** Can Start */
+      can_start: boolean;
+      /** Can Stop */
+      can_stop: boolean;
+      /** Next Stop */
+      next_stop: string | null;
+      /**
+       * Gps
+       * @enum {string}
+       */
+      gps: "LIVE" | "STALE" | "UNAVAILABLE";
+      /**
+       * Gps Source
+       * @default simulated
+       * @constant
+       */
+      gps_source: "simulated";
+      live: components["schemas"]["DriverLiveOut"] | null;
+      /** Message */
+      message: string | null;
+    };
+    /** DriverInfoOut */
+    DriverInfoOut: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /** Phone */
+      phone: string;
+    };
+    /**
+     * DriverLiveOut
+     * @description The bus's tracked state — the SAME ``BusState`` students and admins see.
+     */
+    DriverLiveOut: {
+      location: components["schemas"]["LatLonOut"];
+      /** Speed Kmh */
+      speed_kmh: number;
+      /** Heading Deg */
+      heading_deg: number | null;
+      bus_status: components["schemas"]["BusStatus"];
+      /** Current Stop */
+      current_stop: string | null;
+      /** Next Stop */
+      next_stop: string | null;
+      /** Occupancy */
+      occupancy: number;
+      /** Capacity */
+      capacity: number;
+      /** Available Seats */
+      available_seats: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
+      /** Delay Minutes */
+      delay_minutes: number;
+      /**
+       * Schedule Status
+       * @enum {string}
+       */
+      schedule_status: "on_time" | "delayed";
+      route_status: components["schemas"]["RouteStatus"] | null;
+      /** Deviation Distance M */
+      deviation_distance_m: number | null;
+      /**
+       * Last Fix At
+       * Format: date-time
+       */
+      last_fix_at: string;
+    };
+    /** DriverRouteOut */
+    DriverRouteOut: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /** Color */
+      color: string;
+      /** Route Direction Id */
+      route_direction_id: string | null;
+      direction: components["schemas"]["Direction"] | null;
+      /** Label */
+      label: string | null;
+    };
+    /** DriverRouteViewOut */
+    DriverRouteViewOut: {
+      route: components["schemas"]["DriverRouteOut"] | null;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Stops */
+      stops: components["schemas"]["DriverStopOut"][];
+      bus_location: components["schemas"]["LatLonOut"] | null;
+      path: components["schemas"]["LineString"] | null;
+    };
+    /** DriverStopOut */
+    DriverStopOut: {
+      /** Seq */
+      seq: number;
+      /** Stop Id */
+      stop_id: string;
+      /** Name */
+      name: string;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "passed" | "current" | "next" | "upcoming";
+    };
+    /** DriverTripOut */
+    DriverTripOut: {
+      /** Id */
+      id: string;
+      status: components["schemas"]["TripStatus"];
+      /**
+       * Scheduled Start
+       * Format: date-time
+       */
+      scheduled_start: string;
+      /** Actual Start */
+      actual_start: string | null;
+      /** Actual End */
+      actual_end: string | null;
+      /** First Stop */
+      first_stop: string | null;
+      /** Last Stop */
+      last_stop: string | null;
     };
     /**
      * EtaBreakdownOut
@@ -1368,6 +2048,22 @@ export interface components {
         | "passed_stop"
         | "trip_completed";
     };
+    /** FilterOptionOut */
+    FilterOptionOut: {
+      /** Value */
+      value: string;
+      /** Label */
+      label: string;
+    };
+    /** FleetFilterOptionsOut */
+    FleetFilterOptionsOut: {
+      /** Routes */
+      routes: components["schemas"]["FilterOptionOut"][];
+      /** Buses */
+      buses: components["schemas"]["FilterOptionOut"][];
+      /** Statuses */
+      statuses: components["schemas"]["FilterOptionOut"][];
+    };
     /**
      * FleetStatus
      * @description Administrative status of a bus (not its live driving state).
@@ -1411,6 +2107,17 @@ export interface components {
       db: "ok" | "down" | "not_configured";
       clock: components["schemas"]["ClockOut"];
     };
+    /** LabelValueOut */
+    LabelValueOut: {
+      /** Label */
+      label: string;
+      /** Value */
+      value: number;
+      /** Key */
+      key?: string | null;
+      /** Color */
+      color?: string | null;
+    };
     /** LatLonOut */
     LatLonOut: {
       /** Lat */
@@ -1431,6 +2138,22 @@ export interface components {
       type: "LineString";
       /** Coordinates */
       coordinates: [number, number][];
+    };
+    /**
+     * LiveAnalyticsOut
+     * @description Computed from today's backend state (live / real).
+     */
+    LiveAnalyticsOut: {
+      /** Passengers Per Route */
+      passengers_per_route: components["schemas"]["LabelValueOut"][];
+      /** Occupancy By Bus */
+      occupancy_by_bus: components["schemas"]["OccupancyBarOut"][];
+      trips_today: components["schemas"]["TripCountsOut"];
+      /** Trips By Departure Hour */
+      trips_by_departure_hour: components["schemas"]["LabelValueOut"][];
+      average_delay: components["schemas"]["DelaySummaryOut"];
+      /** Qr Boardings By Slot */
+      qr_boardings_by_slot: components["schemas"]["LabelValueOut"][];
     };
     /** MeOut */
     MeOut: {
@@ -1536,6 +2259,13 @@ export interface components {
       /** Other Buses */
       other_buses: components["schemas"]["StopBusOut"][];
     };
+    /** NamedRefOut */
+    NamedRefOut: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+    };
     /** NearbyStopOut */
     NearbyStopOut: {
       /** Id */
@@ -1549,6 +2279,24 @@ export interface components {
       is_campus_terminal: boolean;
       /** Distance M */
       distance_m: number;
+    };
+    /** OccupancyBarOut */
+    OccupancyBarOut: {
+      /** Bus Id */
+      bus_id: string;
+      /** Route Id */
+      route_id: string;
+      /** Occupancy */
+      occupancy: number;
+      /** Capacity */
+      capacity: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
+      /**
+       * Crowding
+       * @enum {string}
+       */
+      crowding: "Low" | "Medium" | "High" | "Unknown";
     };
     /** OccupancyOut */
     OccupancyOut: {
@@ -1796,6 +2544,48 @@ export interface components {
       /** Major M */
       major_m: number;
     };
+    /** ScheduleTripOut */
+    ScheduleTripOut: {
+      /** Trip Id */
+      trip_id: string;
+      /** Route Id */
+      route_id: string;
+      /** Route Name */
+      route_name: string;
+      /** Route Color */
+      route_color: string;
+      /** Route Direction Id */
+      route_direction_id: string;
+      direction: components["schemas"]["Direction"];
+      /** Direction Label */
+      direction_label: string;
+      /** First Stop */
+      first_stop: string;
+      /** Last Stop */
+      last_stop: string;
+      /**
+       * Scheduled Departure
+       * Format: date-time
+       */
+      scheduled_departure: string;
+      /**
+       * Scheduled Arrival
+       * Format: date-time
+       */
+      scheduled_arrival: string;
+      /** Actual Start */
+      actual_start: string | null;
+      /** Actual End */
+      actual_end: string | null;
+      /** Bus Id */
+      bus_id: string;
+      /** Reg No */
+      reg_no: string;
+      driver: components["schemas"]["NamedRefOut"] | null;
+      status: components["schemas"]["TripStatus"];
+      /** Delay Min */
+      delay_min: number | null;
+    };
     /**
      * Severity
      * @enum {string}
@@ -1990,6 +2780,36 @@ export interface components {
       /** Label */
       label: string;
     };
+    /**
+     * SyntheticAnalyticsOut
+     * @description Deterministic demo history (no history is stored yet). NEVER live data.
+     */
+    SyntheticAnalyticsOut: {
+      /**
+       * Synthetic
+       * @default true
+       * @constant
+       */
+      synthetic: true;
+      /**
+       * Label
+       * @default Synthetic demo data
+       * @constant
+       */
+      label: "Synthetic demo data";
+      /** Method */
+      method: string;
+      /** Seed */
+      seed: number;
+      /** Daily Passengers */
+      daily_passengers: components["schemas"]["LabelValueOut"][];
+      /** Average Delay By Day */
+      average_delay_by_day: components["schemas"]["LabelValueOut"][];
+      /** Peak Boarding By Hour */
+      peak_boarding_by_hour: components["schemas"]["LabelValueOut"][];
+      /** Passengers Per Route Weekly Avg */
+      passengers_per_route_weekly_avg: components["schemas"]["LabelValueOut"][];
+    };
     /** TelemetryBatchIn */
     TelemetryBatchIn: {
       /** Bus Id */
@@ -2057,6 +2877,24 @@ export interface components {
       /** Events */
       events: components["schemas"]["BoardingEventOut"][];
     };
+    /** TripCountsOut */
+    TripCountsOut: {
+      /** Total */
+      total: number;
+      /** Scheduled */
+      scheduled: number;
+      /** Active */
+      active: number;
+      /** Completed */
+      completed: number;
+      /** Cancelled */
+      cancelled: number;
+    };
+    /**
+     * TripStatus
+     * @enum {string}
+     */
+    TripStatus: "scheduled" | "active" | "completed" | "cancelled";
     /** ValidationError */
     ValidationError: {
       /** Location */
@@ -2581,6 +3419,106 @@ export interface operations {
       };
     };
   };
+  driver_me_api_v1_driver_me_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverDashboardOut"];
+        };
+      };
+    };
+  };
+  start_trip_api_v1_driver_trip_start_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverDashboardOut"];
+        };
+      };
+    };
+  };
+  stop_trip_api_v1_driver_trip_stop_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverDashboardOut"];
+        };
+      };
+    };
+  };
+  simulate_gps_api_v1_driver_simulate_gps_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverDashboardOut"];
+        };
+      };
+    };
+  };
+  driver_route_api_v1_driver_route_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverRouteViewOut"];
+        };
+      };
+    };
+  };
   sim_status_api_v1_sim_status_get: {
     parameters: {
       query?: never;
@@ -3027,8 +3965,10 @@ export interface operations {
   list_alerts_api_v1_alerts_get: {
     parameters: {
       query?: {
-        /** @description Only alerts whose condition is still ongoing */
-        active?: boolean;
+        /** @description true: ongoing only · false: resolved only */
+        active?: boolean | null;
+        /** @description true: unread only · false: read only */
+        unread?: boolean | null;
         limit?: number;
       };
       header?: never;
@@ -3053,6 +3993,176 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  mark_alert_read_api_v1_alerts__alert_id__read_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alert_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  overview_api_v1_admin_overview_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminOverviewOut"];
+        };
+      };
+    };
+  };
+  fleet_api_v1_admin_fleet_get: {
+    parameters: {
+      query?: {
+        /** @description Assigned route, e.g. R1 */
+        route_id?: string | null;
+        /** @description One bus, e.g. B07 */
+        bus_id?: string | null;
+        /** @description Operational status */
+        status?:
+          | (
+              | "active"
+              | "delayed"
+              | "deviated"
+              | "breakdown"
+              | "waiting"
+              | "completed"
+              | "idle"
+              | "out_of_service"
+            )
+          | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminFleetOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  routes_api_v1_admin_routes_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminRouteOut"][];
+        };
+      };
+    };
+  };
+  schedule_api_v1_admin_schedule_get: {
+    parameters: {
+      query?: {
+        /** @description Only this route */
+        route_id?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminScheduleOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  analytics_api_v1_admin_analytics_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminAnalyticsOut"];
         };
       };
     };

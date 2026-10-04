@@ -186,7 +186,14 @@ async def _status(container, bus="B05"):
 
 
 async def _alerts(container):
-    return await container.repos.alerts.recent()
+    """The fleet (admin) route-deviation alerts — Feature 11 also notifies students separately."""
+    return [
+        a
+        for a in await container.repos.alerts.recent()
+        if a.type.value == "ROUTE_DEVIATION"
+        and a.audience.role is not None
+        and a.audience.role.value == "admin"
+    ]
 
 
 async def test_normal_simulation_stays_normal(container):
@@ -326,5 +333,5 @@ async def test_trip_change_closes_an_open_deviation(container):
     devs = {d.trip_id: d for d in await container.repos.deviations.list()}
     assert devs[prev.trip_id].status.value == "resolved"  # the old trip's deviation is closed
     assert devs["T-NEXT"].status.value == "open"  # still off route on the new trip → new episode
-    assert len(await container.repos.alerts.recent()) == 2
+    assert len(await _alerts(container)) == 2
     await sim.shutdown()

@@ -2,18 +2,27 @@
  * Live fleet state from the BACKEND (synthetic simulator → telemetry → tracking)
  * and the backend's stop matching for the signed-in student.
  *
- * Lightweight POLLING of `GET /buses`, `GET /students/me/arrivals` (matching +
- * backend ETA), `GET /students/me/bus-options` (backend multi-bus comparison),
- * `GET /students/me/commute-decision` (backend "Will I make my bus?"),
- * `GET /students/me/recovery-options` (backend missed-bus recovery) and
- * `GET /sim/status` every few seconds —
- * the WebSocket feed replaces this later. The browser never computes bus
- * positions; it only displays what the backend reports.
+ * Feature 14 — real time:
+ * 1. REST loads everything once: `GET /buses`, `/students/me/arrivals` (matching + ETA),
+ *    `/students/me/bus-options`, `/students/me/commute-decision`,
+ *    `/students/me/recovery-options`, `/alerts` (own notifications) and `/sim/status`.
+ * 2. The WebSocket (`/api/v1/ws`) then pushes changes:
+ *    - `bus.state.updated` → the bus's `GET /buses` item, applied in place;
+ *    - `alert.*`           → the student's OWN alerts (the backend never sends others');
+ *    - `eta.updated`, `occupancy.updated`, `route.deviation`, `trip.*` for a bus relevant
+ *      to this student → the student-specific backend answers (arrivals, comparison,
+ *      decision, recovery) are re-fetched, at most once per 1.5 s;
+ *    - `sim.reset` → everything is re-fetched.
+ * 3. After every (re)connection REST is fetched once (no missed events). While the socket
+ *    is down, REST is polled every 10 s; while it is live, only every 60 s as a safety net.
+ *
+ * The browser never computes bus positions, ETAs, occupancy or decisions.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useApi } from "../api/ApiContext";
 import type {
+  Alert,
   BusOptionsOut,
   BusOut,
   CommuteDecisionOut,
@@ -21,8 +30,16 @@ import type {
   RecoveryOut,
   SimStatusOut,
 } from "../api/types";
+import { RealtimeClient, type RealtimeStatus, type WsEnvelope } from "../realtime/client";
 
+/** Legacy fast poll interval (kept for reference in the UI copy). */
 export const POLL_MS = 3_000;
+/** WebSocket down → REST polling of live data at this slower interval. */
+export const FALLBACK_POLL_MS = 10_000;
+/** WebSocket live → occasional safety re-sync over REST. */
+export const RESYNC_MS = 60_000;
+/** Student-specific answers are re-fetched at most this often after relevant pushes. */
+export const DERIVED_THROTTLE_MS = 1_500;
 
 export interface LiveFleet {
   buses: BusOut[] | null;
@@ -34,10 +51,16 @@ export interface LiveFleet {
   commute: CommuteDecisionOut | null;
   /** Backend missed-bus recovery (suggestions only). */
   recovery: RecoveryOut | null;
+  /** The student's own backend alerts, newest first (Feature 11). */
+  alerts: Alert[] | null;
+  /** Mark an alert read (optimistic; the backend stays authoritative). */
+  markAlertRead: (alertId: string) => Promise<void>;
   sim: SimStatusOut | null;
   error: Error | null;
-  /** Wall-clock time of the last successful poll. */
+  /** Wall-clock time of the last successful fetch of the ETA-bearing data. */
   fetchedAt: Date | null;
+  /** Feature 14 connection state of the live feed. */
+  realtime: RealtimeStatus;
   refresh: () => Promise<void>;
   control: {
     start: () => Promise<void>;
@@ -47,25 +70,35 @@ export interface LiveFleet {
   };
 }
 
-export function useLiveFleet(pollMs: number = POLL_MS): LiveFleet {
+const RELEVANT_TYPES = new Set(["eta.updated", "occupancy.updated", "route.deviation"]);
+
+/** Newer-or-equal backend fix wins (events may arrive late or twice). */
+function isNewer(next: BusOut, cur: BusOut): boolean {
+  return (next.live?.last_updated ?? "") >= (cur.live?.last_updated ?? "");
+}
+
+export function useLiveFleet(): LiveFleet {
   const api = useApi();
   const [buses, setBuses] = useState<BusOut[] | null>(null);
   const [arrivals, setArrivals] = useState<MyArrivalsOut | null>(null);
   const [options, setOptions] = useState<BusOptionsOut | null>(null);
   const [commute, setCommute] = useState<CommuteDecisionOut | null>(null);
   const [recovery, setRecovery] = useState<RecoveryOut | null>(null);
+  const [alerts, setAlerts] = useState<Alert[] | null>(null);
   const [sim, setSim] = useState<SimStatusOut | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
+  const [realtime, setRealtime] = useState<RealtimeStatus>("connecting");
 
   const refresh = useCallback(async () => {
     try {
-      const [b, a, o, d, r, s] = await Promise.all([
+      const [b, a, o, d, r, n, s] = await Promise.all([
         api.listBuses(),
         api.myArrivals(),
         api.myBusOptions(),
         api.myCommuteDecision(),
         api.myRecoveryOptions(),
+        api.alerts({ limit: 20 }),
         api.simStatus(),
       ]);
       setBuses(b);
@@ -73,6 +106,7 @@ export function useLiveFleet(pollMs: number = POLL_MS): LiveFleet {
       setOptions(o);
       setCommute(d);
       setRecovery(r);
+      setAlerts(n);
       setSim(s);
       setError(null);
       setFetchedAt(new Date());
@@ -81,19 +115,121 @@ export function useLiveFleet(pollMs: number = POLL_MS): LiveFleet {
     }
   }, [api]);
 
+  /** Only the student-specific backend answers (they depend on the buses that moved). */
+  const refreshDerived = useCallback(async () => {
+    try {
+      const [a, o, d, r] = await Promise.all([
+        api.myArrivals(),
+        api.myBusOptions(),
+        api.myCommuteDecision(),
+        api.myRecoveryOptions(),
+      ]);
+      setArrivals(a);
+      setOptions(o);
+      setCommute(d);
+      setRecovery(r);
+      setFetchedAt(new Date());
+    } catch (e) {
+      setError(e instanceof Error ? e : new Error(String(e)));
+    }
+  }, [api]);
+
+  // Buses whose changes affect this student's answers (assigned bus + buses at the stop).
+  const relevant = useRef<Set<string>>(new Set());
   useEffect(() => {
-    let cancelled = false;
-    const tick = () => {
-      if (!cancelled) void refresh();
-    };
-    const first = setTimeout(tick, 0);
-    const id = setInterval(tick, pollMs);
+    const ids = new Set<string>();
+    if (arrivals?.status === "assigned") {
+      if (arrivals.assigned_bus_id) ids.add(arrivals.assigned_bus_id);
+      arrivals.arrivals.forEach((x) => ids.add(x.bus_id));
+    }
+    options?.options.forEach((x) => ids.add(x.bus_id));
+    relevant.current = ids;
+  }, [arrivals, options]);
+
+  const derivedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleDerived = useCallback(() => {
+    if (derivedTimer.current) return; // throttle: one re-fetch per window
+    derivedTimer.current = setTimeout(() => {
+      derivedTimer.current = null;
+      void refreshDerived();
+    }, DERIVED_THROTTLE_MS);
+  }, [refreshDerived]);
+
+  const onEvent = useCallback(
+    (e: WsEnvelope) => {
+      const busId = (e.data as { bus_id?: string }).bus_id;
+      const isRelevant = (id: string | undefined) =>
+        !id || relevant.current.size === 0 || relevant.current.has(id);
+      switch (e.type) {
+        case "bus.state.updated": {
+          const bus = (e.data as { bus: BusOut }).bus;
+          setBuses((prev) =>
+            prev ? prev.map((b) => (b.id === bus.id && isNewer(bus, b) ? bus : b)) : prev,
+          );
+          return;
+        }
+        case "alert.created":
+        case "alert.updated":
+        case "alert.resolved": {
+          const a = e.data as unknown as Alert;
+          if (a.recipient !== "student") return;
+          setAlerts((prev) => {
+            const rest = (prev ?? []).filter((x) => x.alert_id !== a.alert_id);
+            return [a, ...rest].sort((x, y) => y.timestamp.localeCompare(x.timestamp));
+          });
+          return;
+        }
+        case "alert.read": {
+          const id = (e.data as { alert_id: string }).alert_id;
+          setAlerts(
+            (prev) => prev && prev.map((x) => (x.alert_id === id ? { ...x, read: true } : x)),
+          );
+          return;
+        }
+        case "trip.started":
+        case "trip.completed":
+          scheduleDerived(); // a bus may have started (or stopped) serving the stop
+          return;
+        case "sim.reset":
+          void refresh();
+          return;
+        default:
+          if (RELEVANT_TYPES.has(e.type) && isRelevant(busId)) scheduleDerived();
+      }
+    },
+    [refresh, scheduleDerived],
+  );
+
+  const latest = useRef({ onEvent, refresh });
+  useEffect(() => {
+    latest.current = { onEvent, refresh };
+  });
+
+  // Initial REST state, then the socket; REST re-sync after every (re)connection.
+  useEffect(() => {
+    const first = setTimeout(() => void latest.current.refresh(), 0);
+    const client = new RealtimeClient({
+      url: api.realtimeUrl(),
+      getToken: () => api.token(),
+      onEvent: (e) => latest.current.onEvent(e),
+      onOpen: () => void latest.current.refresh(),
+      onStatus: setRealtime,
+    });
+    client.start();
     return () => {
-      cancelled = true;
       clearTimeout(first);
-      clearInterval(id);
+      client.stop();
+      if (derivedTimer.current) clearTimeout(derivedTimer.current);
+      derivedTimer.current = null;
     };
-  }, [refresh, pollMs]);
+  }, [api]);
+
+  // Fallback polling while the socket is down; a slow safety re-sync while it is live.
+  const interval = realtime === "live" ? RESYNC_MS : FALLBACK_POLL_MS;
+  useEffect(() => {
+    const id = setInterval(() => void latest.current.refresh(), interval);
+    return () => clearInterval(id);
+  }, [interval]);
 
   const act = useCallback(
     (call: () => Promise<SimStatusOut>) => async () => {
@@ -113,9 +249,23 @@ export function useLiveFleet(pollMs: number = POLL_MS): LiveFleet {
     options,
     commute,
     recovery,
+    alerts,
+    markAlertRead: async (alertId: string) => {
+      setAlerts(
+        (prev) => prev && prev.map((x) => (x.alert_id === alertId ? { ...x, read: true } : x)),
+      );
+      try {
+        const updated = await api.markAlertRead(alertId);
+        setAlerts((prev) => prev && prev.map((x) => (x.alert_id === alertId ? updated : x)));
+      } catch (e) {
+        setError(e instanceof Error ? e : new Error(String(e)));
+        await refresh(); // re-sync with the backend
+      }
+    },
     sim,
     error,
     fetchedAt,
+    realtime,
     refresh,
     control: {
       start: act(() => api.simStart()),

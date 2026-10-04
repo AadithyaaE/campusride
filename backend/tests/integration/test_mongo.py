@@ -196,3 +196,35 @@ async def test_boarding_unique_student_trip_index(repos: Repositories):
     assert await repos.boarding_events.count_for_trip("T-X") == 3
     assert (await repos.boarding_events.for_student_trip("U-S0001", "T-X")).id == "BRD-1"
     assert await repos.boarding_events.delete_for_buses(["B05"]) == 3
+
+
+async def test_alert_one_active_per_series_index(repos: Repositories):
+    from app.models import Alert
+    from app.models.alert import AlertAudience
+    from app.models.common import AlertType, Severity
+
+    def alert(episode: int) -> Alert:
+        return Alert(
+            id=f"ALT-BUS_DELAYED-S-U-S0001-B05-T1-{episode}",
+            type=AlertType.BUS_DELAYED,
+            severity=Severity.WARNING,
+            audience=AlertAudience(role=Role.STUDENT, user_id="U-S0001"),
+            title="BUS DELAYED",
+            body="Bus B05 is running 8 minutes late.",
+            created_at=datetime(2026, 10, 5, 2, 0, tzinfo=UTC),
+            bus_id="B05",
+            trip_id="T1",
+            dedup_key="BUS_DELAYED|S-U-S0001|B05|T1",
+            episode=episode,
+        )
+
+    first = alert(1)
+    assert await repos.alerts.insert_once(first) is True
+    assert await repos.alerts.insert_once(first) is False  # same id
+    assert await repos.alerts.insert_once(alert(2)) is False  # series already has an ACTIVE alert
+    await repos.alerts.upsert(first.model_copy(update={"active": False, "resolved_at": first.created_at}))
+    assert await repos.alerts.insert_once(alert(2)) is True  # resolved history doesn't block a new episode
+    assert await repos.alerts.count_series(first.dedup_key) == 2
+    mine = await repos.alerts.for_recipient(user_id="U-S0001", active=True)
+    assert [a.episode for a in mine] == [2]
+    assert await repos.alerts.delete_for_buses(["B05"]) == 2

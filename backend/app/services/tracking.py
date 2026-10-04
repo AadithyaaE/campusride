@@ -194,9 +194,14 @@ class TelemetryIngestService:
         self._routes: dict[str, Route] = {}
         self._buses: dict[str, Bus] = {}
         self._locks: dict[str, asyncio.Lock] = {}
-        from app.services.route_anomaly_service import RouteAnomalyService  # avoids an import cycle
+        # Local imports avoid an import cycle (both modules use tracking's helpers).
+        from app.services.alert_service import AlertService
+        from app.services.route_anomaly_service import RouteAnomalyService
 
-        self.anomaly = RouteAnomalyService(repos, events, settings, clock)
+        self.alerts = AlertService(repos, events, clock, settings)
+        """Feature 11 — THE alert service: bus-level alerts follow every new BusState."""
+        events.subscribe(BusStateUpdated, self.alerts.on_bus_state, name=f"alerts.bus_state.{id(self)}")
+        self.anomaly = RouteAnomalyService(repos, events, settings, clock, self.alerts)
         """Feature 10 — evaluated on every fix, so deviation alerts follow state, not polling."""
 
     def _lock_for(self, bus_id: str) -> asyncio.Lock:
@@ -303,6 +308,37 @@ class TelemetryIngestService:
             await self._repos.bus_states.upsert(state)
         await self._events.publish(BusStateUpdated(ts=state.ts, state=state))
         return state
+
+    async def start_trip(self, trip_id: str, at: datetime) -> Trip:
+        """Driver-initiated start (Feature 12): SCHEDULED → ACTIVE, same event as tracking."""
+        trip = await self._repos.trips.get(trip_id)
+        if trip is None:
+            raise NotFoundError(f"trip {trip_id} not found")
+        if trip.status is TripStatus.SCHEDULED:
+            trip = await self._repos.trips.set_status(trip.id, TripStatus.ACTIVE, at) or trip
+            await self._events.publish(
+                TripStarted(
+                    ts=at,
+                    trip_id=trip.id,
+                    bus_id=trip.bus_id,
+                    route_id=trip.route_id,
+                    variant_id=trip.variant_id,
+                    direction=trip.direction,
+                )
+            )
+        return trip
+
+    async def end_trip(self, trip_id: str, at: datetime) -> Trip:
+        """Driver-initiated stop (Feature 12): → COMPLETED (the next fix derives COMPLETED)."""
+        trip = await self._repos.trips.get(trip_id)
+        if trip is None:
+            raise NotFoundError(f"trip {trip_id} not found")
+        if trip.status is not TripStatus.COMPLETED:
+            trip = await self._repos.trips.set_status(trip.id, TripStatus.COMPLETED, at) or trip
+            await self._events.publish(
+                TripEnded(ts=at, trip_id=trip.id, bus_id=trip.bus_id, variant_id=trip.variant_id)
+            )
+        return trip
 
     async def _update_trip(self, trip: Trip, prev: BusState | None, state: BusState, at: datetime) -> Trip:
         if trip.status is TripStatus.SCHEDULED and state.status in (BusStatus.EN_ROUTE, BusStatus.DWELLING):

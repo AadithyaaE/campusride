@@ -8,7 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from app.models import Alert, LineString
-from app.models.common import RouteStatus, Severity
+from app.models.common import AlertType, Role, RouteStatus, Severity
 from app.services.route_anomaly_service import BusRouteStatus
 
 
@@ -91,26 +91,54 @@ class RouteStatusOut(BaseModel):
 
 
 class AlertOut(BaseModel):
-    id: str
-    type: str
-    severity: Severity
+    """One in-app alert (Feature 11). ``id``/``body``/``created_at`` kept for Feature 10 clients."""
+
+    alert_id: str
+    type: AlertType
     title: str
-    body: str
-    payload: dict[str, Any]
-    created_at: datetime
+    message: str
+    bus_id: str | None
+    trip_id: str | None
+    route_id: str | None
+    student_id: str | None
+    """Recipient student (null for fleet/admin alerts)."""
+    admin_id: str | None
+    """Null = every admin (fleet alert); reserved for per-admin alerts."""
+    recipient: Literal["student", "admin"]
+    severity: Severity
+    timestamp: datetime
+    """When the alert was raised (simulation time)."""
+    updated_at: datetime | None
+    read: bool
     resolved_at: datetime | None
     active: bool
+    payload: dict[str, Any]
+    id: str
+    body: str
+    created_at: datetime
 
     @classmethod
     def of(cls, a: Alert) -> AlertOut:
+        admin = a.audience.role is Role.ADMIN
         return cls(
-            id=a.id,
-            type=a.type.value,
-            severity=a.severity,
+            alert_id=a.id,
+            type=a.type,
             title=a.title,
-            body=a.body,
-            payload=a.payload,
-            created_at=a.created_at,
+            message=a.body,
+            bus_id=a.bus_id or a.payload.get("bus_id"),
+            trip_id=a.trip_id or a.payload.get("trip_id"),
+            route_id=a.route_id or a.payload.get("route_id"),
+            student_id=None if admin else a.audience.user_id,
+            admin_id=None,
+            recipient="admin" if admin else "student",
+            severity=a.severity,
+            timestamp=a.created_at,
+            updated_at=a.updated_at,
+            read=a.read,
             resolved_at=a.resolved_at,
-            active=a.resolved_at is None,
+            active=a.active and a.resolved_at is None,
+            payload=a.payload,
+            id=a.id,
+            body=a.body,
+            created_at=a.created_at,
         )

@@ -37,13 +37,14 @@ LOCATION_UNAVAILABLE and UNKNOWN say a decision can't be made.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import Literal
 
 from app.core.clock import Clock
 from app.core.config import Settings
 from app.geo import walking_distance_m
+from app.models.assignment import StudentAssignment
 from app.models.common import BusStatus
 from app.repositories import Repositories
 from app.services.assignments import ResolvedAssignment
@@ -236,6 +237,37 @@ class CommuteDecisionService:
         options = await self._comparison.for_student(student_id)
         if options is None:
             return None
+        return await self._decide(student_id, options)
+
+    async def for_students(self, student_ids: list[str]) -> list[StudentCommute]:
+        """Same decisions for many students (Feature 11 alert sweep).
+
+        Students with the same assigned bus, boarding stop and direction share one
+        Feature 6 comparison (computed once per group); each student then gets the
+        exact per-student decision of ``for_student`` (own location and walking speed).
+        """
+        groups: dict[tuple[str, str, str], list[StudentAssignment]] = {}
+        for sa in await self._repos.student_assignments.get_many(student_ids):
+            key = (sa.assigned_bus_id, sa.boarding_stop_id, sa.assigned_route_direction_id)
+            groups.setdefault(key, []).append(sa)
+        profiles = {p.id: p for p in await self._repos.student_profiles.get_many(student_ids)}
+        out: list[StudentCommute] = []
+        for members in groups.values():
+            members.sort(key=lambda sa: sa.id)
+            options = await self._comparison.for_student(members[0].id)
+            if options is None:
+                continue
+            for sa in members:
+                mine = replace(options, assignment=replace(options.assignment, assignment=sa))
+                speed = (
+                    profiles[sa.id].walk_speed_mps if sa.id in profiles else self._settings.walking_speed_mps
+                )
+                out.append(await self._decide(sa.id, mine, walking_speed_mps=speed))
+        return sorted(out, key=lambda c: c.assignment.assignment.id)
+
+    async def _decide(
+        self, student_id: str, options: StudentBusOptions, *, walking_speed_mps: float | None = None
+    ) -> StudentCommute:
         a = options.assignment
         now = self._clock.now()
 
@@ -256,8 +288,11 @@ class CommuteDecisionService:
             if location is not None
             else None
         )
-        profile = await self._repos.student_profiles.get(student_id)
-        speed = profile.walk_speed_mps if profile is not None else self._settings.walking_speed_mps
+        if walking_speed_mps is None:
+            profile = await self._repos.student_profiles.get(student_id)
+            speed = profile.walk_speed_mps if profile is not None else self._settings.walking_speed_mps
+        else:
+            speed = walking_speed_mps
 
         result = evaluate_commute(
             now=now,

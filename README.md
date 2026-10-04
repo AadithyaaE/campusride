@@ -25,6 +25,10 @@ Architecture and decisions: [docs/architecture.md](docs/architecture.md).
 | F8 | QR-based live capacity — simulated QR scanner (student app) → `POST /boarding/scan` (assignment + active-trip validation, one boarding per student per trip), occupancy = synthetic baseline + QR boardings, `GET /buses/{id}/occupancy`, `GET /trips/{id}/boarding`; first `admin-web` dashboard (live occupancy) | ✅ done |
 | F9 | Missed-bus recovery — when the assigned bus is at risk, missed or ≥ 5 min late, the backend offers other buses serving the SAME assigned stop/direction that the student can still catch (Feature 7 walking rules), ranked catchable → ETA → occupancy → on time → distance; `GET /students/me/recovery-options` (+ owner/admin by id); dashboard recovery card. Suggestions never change the assigned bus | ✅ done |
 | F10 | Route deviation detection — shortest distance from each bus's TRACKED position to its PLANNED route geometry → NORMAL (≤ 50 m) / MINOR_DEVIATION / MAJOR_DEVIATION (≥ 150 m); `GET /buses/{id}/route-status`; one alert per MAJOR episode (`GET /alerts`, admin); demo controls `POST /sim/route-deviation` (normal / minor / major); admin route map + student "Route" line. The route remains the planned route; demo deviation changes the synthetic bus position, not the route geometry | ✅ done |
+| F11 | Real-time in-app alerts — one backend `AlertService` (Feature 10's deviation alerts included): BUS_APPROACHING, BUS_DELAYED, CAPACITY_WARNING, ROUTE_DEVIATION, MISSED_BUS, ALTERNATIVE_BUS_AVAILABLE; transition-based and idempotent (one active alert per series, unique index); read/unread + resolution; `GET /alerts`, `PATCH /alerts/{id}/read`; student Notifications panel + admin Active alerts. Feature 11 uses HTTP polling for the prototype. The backend alert service is designed so the same alert events can later be delivered through WebSockets without moving alert-generation logic into the frontend | ✅ done |
+| F12 | Driver App (React Native + Expo, `apps/driver-app`) — driver signs in (mock auth), sees the backend assignment, START / STOP TRIP drive the EXISTING simulator for driver-controlled buses (`SIM_DRIVER_CONTROLLED_BUSES`, default B07): same synthetic telemetry → tracking → BusState the Student and Admin dashboards read; speed, GPS freshness, passengers, next stop, route and occupancy all from the backend. Feature 12 uses synthetic GPS; actual device GPS is not implemented yet | ✅ done |
+| F13 | Transport admin dashboard — `admin-web` becomes one control room: KPI cards, live fleet map (Leaflet/OSM), fleet table with route/bus/status filters, active buses, occupancy, route deviations, delays, alerts, read-only route & schedule management, usage analytics (live aggregates + clearly labelled deterministic synthetic history); `GET /admin/overview`, `/admin/fleet`, `/admin/routes`, `/admin/schedule`, `/admin/analytics` (admins only) | ✅ done |
+| F14 | Real-time WebSocket updates — `/api/v1/ws` (first-message token auth, role/user/bus audiences, heartbeat) fed by the EXISTING event bus: bus state, fleet rows, driver dashboard, trips, occupancy, ETA, route deviation, boarding, alerts, admin KPIs; coalesced ≤ 1 push/s per bus; all three apps load REST first, re-sync after every reconnect and fall back to 10 s polling. See `docs/realtime.md` | ✅ done |
 | 2 | Simulator, telemetry ingestion, WebSocket, live buses on the student map | next |
 | 3 | Stop selection, matching, baseline ETA, multi-bus arrivals | |
 | 4 | "Will I make my bus?", missed-bus recovery | |
@@ -45,13 +49,14 @@ Live bus positions (Feature 3) — synthetic, but through the real pipeline:
 
 ```
 SimClock → bus simulator ──(same function as POST /driver/telemetry)──▶ telemetry ingestion
-        → tracking → BusState (MongoDB) → GET /buses  ◀── polled every 3 s by the Student app
+        → tracking → BusState (MongoDB) → event bus → WebSocket /api/v1/ws → Student · Driver · Admin
+                                         (REST: initial load, re-sync, 10 s fallback)
 ```
 
 The simulator starts with FastAPI (exactly one per process), replays the
 morning from 07:15 at 5× and is controlled from the dashboard's **Demo mode**
-(start / pause / reset / 1–20×) or `/api/v1/sim/*`. A WebSocket replaces the
-polling later.
+(start / pause / reset / 1–20×) or `/api/v1/sim/*`. Changes reach the apps over the
+WebSocket within ~1 s (`docs/realtime.md`).
 
 The frontend never holds domain data of its own: stops, routes, geometry and the
 signed-in user all come from FastAPI, which reads MongoDB.
@@ -136,7 +141,7 @@ OpenStreetMap data) and committed to `backend/data/seed/*.geojson`.
 backend/            FastAPI app (app/), seed data (data/), scripts, tests
 apps/student-web/   React + Vite + TS + Leaflet student app (Phase 1b; live buses in Phase 2)
 apps/admin-web/     React + Vite + TS        (live occupancy since F8; rest Phase 6) — :5174
-apps/driver-app/    React Native + Expo      (Phase 5)
+apps/driver-app/    React Native + Expo      (Driver App since F12; `npx expo start`)
 packages/api-client generated TS client from OpenAPI (Phase 2)
 packages/web-ui     shared web components, MapView adapter (Phase 2)
 infra/              docker-compose (MongoDB)

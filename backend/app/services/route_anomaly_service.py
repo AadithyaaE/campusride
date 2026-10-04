@@ -19,7 +19,7 @@ show), the authored road geometry of the bus's current route direction
 
 Evaluation happens in the telemetry pipeline (``TelemetryIngestService``), so
 alerts follow STATE TRANSITIONS, never API polling:
-  → MAJOR (from anything else)  open a ``Deviation`` + create one ``Alert``
+  → MAJOR (from anything else)  open a ``Deviation`` + one ROUTE_DEVIATION alert (AlertService)
   MAJOR → MAJOR                 nothing new (max distance tracked on the deviation)
   MAJOR → anything else         deviation RESOLVED, alert ``resolved_at`` set
 A MAJOR deviation also marks the bus ``BusStatus.DEVIATED`` (the existing status
@@ -37,11 +37,11 @@ from app.core.clock import Clock
 from app.core.config import Settings
 from app.core.events import EventBus
 from app.geo import LngLat, project_point
-from app.models import Alert, BusState, Deviation, Route
-from app.models.alert import AlertAudience
-from app.models.common import AlertType, BusStatus, DeviationStatus, RouteStatus, Severity
+from app.models import BusState, Deviation, Route
+from app.models.common import BusStatus, DeviationStatus, RouteStatus
 from app.models.events import DeviationEnded, DeviationStarted
 from app.repositories import Repositories
+from app.services.alert_service import AlertService
 from app.services.tracking import is_stale
 
 DEVIATION_STATES = (RouteStatus.NORMAL, RouteStatus.MINOR_DEVIATION, RouteStatus.MAJOR_DEVIATION)
@@ -138,11 +138,20 @@ def alert_message(bus_id: str, distance_m: float) -> str:
 class RouteAnomalyService:
     """Evaluates tracked states and keeps deviations/alerts in step with transitions."""
 
-    def __init__(self, repos: Repositories, events: EventBus, settings: Settings, clock: Clock) -> None:
+    def __init__(
+        self,
+        repos: Repositories,
+        events: EventBus,
+        settings: Settings,
+        clock: Clock,
+        alerts: AlertService | None = None,
+    ) -> None:
         self._repos = repos
         self._events = events
         self._settings = settings
         self._clock = clock
+        self._alerts = alerts or AlertService(repos, events, clock, settings)
+        """Feature 11: deviation alerts are created/resolved by the central alert service."""
 
     def check(
         self,
@@ -200,28 +209,7 @@ class RouteAnomalyService:
             max_off_route_m=chk.distance_m,
         )
         await self._repos.deviations.upsert(dev)
-        await self._repos.alerts.upsert(
-            Alert(
-                id=f"ALERT-{dev.id}",
-                type=AlertType.DEVIATION,
-                severity=Severity.CRITICAL,
-                audience=AlertAudience(route_id=state.route_id),
-                title=f"BUS {state.id} major route deviation",
-                body=alert_message(state.id, chk.distance_m),
-                payload={
-                    "kind": "route_deviation",
-                    "severity": "major",
-                    "bus_id": state.id,
-                    "trip_id": state.trip_id,
-                    "route_id": state.route_id,
-                    "route_direction_id": state.variant_id,
-                    "deviation_id": dev.id,
-                    "deviation_distance_m": chk.distance_m,
-                    "source": source,
-                },
-                created_at=state.ts,
-            )
-        )
+        await self._alerts.raise_route_deviation(state, chk.distance_m, dev.id, source)
         await self._events.publish(
             DeviationStarted(
                 ts=state.ts,
@@ -244,9 +232,7 @@ class RouteAnomalyService:
         await self._repos.deviations.upsert(
             dev.model_copy(update={"status": DeviationStatus.RESOLVED, "ended_at": state.ts})
         )
-        alert = await self._repos.alerts.get(f"ALERT-{dev.id}")
-        if alert is not None:
-            await self._repos.alerts.upsert(alert.model_copy(update={"resolved_at": state.ts}))
+        await self._alerts.resolve_route_deviation(state.id, state.ts)
         await self._events.publish(
             DeviationEnded(
                 ts=state.ts,

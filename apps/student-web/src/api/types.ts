@@ -60,6 +60,11 @@ export type RecoveryOptionOut = Schemas["RecoveryOptionOut"];
 export type RouteStatus = Schemas["RouteStatus"];
 export type RouteStatusResponse = Schemas["RouteStatusOut"];
 export type RouteDeviationDemoMode = Schemas["RouteDeviationIn"]["mode"];
+// ---- in-app alerts (Feature 11) — created by the backend, displayed as given
+export type Alert = Schemas["AlertOut"];
+export type AlertType = Schemas["AlertType"];
+export type AlertSeverity = Schemas["Severity"];
+export type AlertsResponse = Alert[];
 /** Backend commute decision (Feature 7); YES / RISK / MISSED are the decisions. */
 export type CommuteDecision = NonNullable<CommuteDecisionOut["decision"]>;
 /** Backend comparison indicator (Feature 6). */

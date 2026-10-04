@@ -18,6 +18,7 @@ from app.core.clock import ALLOWED_SIM_SPEEDS
 from app.core.errors import ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError
 from app.deps import Container, CurrentPrincipal
 from app.models.common import Role
+from app.models.events import SimReset
 from app.services.bus_simulator import BusSimulator, SimulatorStatus
 
 router = APIRouter(tags=["simulator (dev/demo)"])
@@ -121,10 +122,12 @@ async def sim_pause(ctl: Controlled) -> SimStatusOut:
 
 
 @router.post("/sim/reset", response_model=SimStatusOut)
-async def sim_reset(ctl: Controlled) -> SimStatusOut:
+async def sim_reset(ctl: Controlled, c: Container) -> SimStatusOut:
     """Back to the start time (e.g. 07:15): trips reset, buses at their first stops."""
     sim, allowed = ctl
-    return _out(await sim.reset(), allowed)
+    st = await sim.reset()
+    await c.events.publish(SimReset(ts=c.clock.now()))  # Feature 14: live clients re-sync over REST
+    return _out(st, allowed)
 
 
 @router.put("/sim/speed", response_model=SimStatusOut)

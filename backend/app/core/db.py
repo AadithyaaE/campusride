@@ -88,6 +88,23 @@ INDEXES: dict[str, list[IndexModel]] = {
     ],
     Collections.ALERTS: [
         IndexModel([("created_at", DESCENDING)], name="created_at"),
+        IndexModel(
+            [("audience.user_id", ASCENDING), ("created_at", DESCENDING)], name="recipient_user_created"
+        ),
+        IndexModel([("audience.role", ASCENDING), ("created_at", DESCENDING)], name="recipient_role_created"),
+        IndexModel(
+            [("dedup_key", ASCENDING)],
+            name="dedup_key_active_unique",
+            unique=True,
+            partialFilterExpression={"active": True},
+        ),
+        IndexModel([("dedup_key", ASCENDING), ("episode", ASCENDING)], name="dedup_series"),
+        IndexModel(
+            [("bus_id", ASCENDING), ("active", ASCENDING), ("type", ASCENDING)], name="bus_active_type"
+        ),
+        IndexModel([("type", ASCENDING), ("active", ASCENDING)], name="type_active"),
+        IndexModel([("read", ASCENDING)], name="read"),
+        IndexModel([("resolved_at", ASCENDING)], name="resolved_at"),
         IndexModel([("audience.route_id", ASCENDING)], name="aud_route"),
         IndexModel([("audience.stop_id", ASCENDING)], name="aud_stop"),
         IndexModel([("audience.user_id", ASCENDING)], name="aud_user"),

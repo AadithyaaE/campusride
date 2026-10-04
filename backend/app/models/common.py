@@ -146,13 +146,16 @@ class DeviationStatus(StrEnum):
 
 
 class AlertType(StrEnum):
-    DELAY = "delay"
-    DEVIATION = "deviation"
-    BREAKDOWN = "breakdown"
-    CAPACITY_FULL = "capacity_full"
-    BUS_APPROACHING = "bus_approaching"
-    MISSED_BUS = "missed_bus"
-    BROADCAST = "broadcast"
+    """Feature 11 in-app alert types (Feature 10's ``deviation`` is ROUTE_DEVIATION)."""
+
+    BUS_APPROACHING = "BUS_APPROACHING"
+    BUS_DELAYED = "BUS_DELAYED"
+    CAPACITY_WARNING = "CAPACITY_WARNING"
+    ROUTE_DEVIATION = "ROUTE_DEVIATION"
+    MISSED_BUS = "MISSED_BUS"
+    ALTERNATIVE_BUS_AVAILABLE = "ALTERNATIVE_BUS_AVAILABLE"
+    BREAKDOWN = "BREAKDOWN"
+    BROADCAST = "BROADCAST"
 
 
 class Severity(StrEnum):

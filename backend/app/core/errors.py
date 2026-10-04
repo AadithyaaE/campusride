@@ -39,6 +39,15 @@ class ForbiddenError(CampusRideError):
     code = "forbidden"
 
 
+class CodedError(CampusRideError):
+    """A rejection with a specific machine-readable ``code`` (e.g. ``trip_already_active``)."""
+
+    def __init__(self, code: str, message: str, status_code: int = 409) -> None:
+        super().__init__(message)
+        self.code = code
+        self.status_code = status_code
+
+
 class ServiceUnavailableError(CampusRideError):
     status_code = 503
     code = "unavailable"

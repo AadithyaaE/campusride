@@ -93,6 +93,8 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
             # Lifespan owns the simulator: prepare once, ONE loop task, stopped on shutdown.
             await c.simulator.reset()
             c.simulator.ensure_loop()
+        c.alert_monitor().ensure_loop()  # Feature 11: student alert sweep on the sim clock
+        c.realtime().ensure_loop()  # Feature 14: coalesced WebSocket push
         log.info(
             "CampusRide up — clock %s (%s), auth=%s",
             c.clock.local_now().isoformat(),
@@ -102,6 +104,8 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
         try:
             yield
         finally:
+            await c.realtime().shutdown()
+            await c.alert_monitor().shutdown()
             if c.simulator is not None:
                 await c.simulator.shutdown()
             if owned and c.database is not None:

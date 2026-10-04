@@ -8,19 +8,12 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
-import type { AdminApi, AlertOut, RouteDeviationDemoMode, RouteStatusResponse } from "./api/client";
-import { ROUTE_LABEL } from "./labels";
+import type { AdminApi, RouteDeviationDemoMode, RouteStatusResponse } from "./api/client";
+import { timeFmt } from "./format";
+import { ROUTE_LABEL, routeTone } from "./labels";
 import { POLL_MS } from "./polling";
 
 const RouteMap = lazy(() => import("./RouteMap"));
-
-const timeFmt = new Intl.DateTimeFormat("en-IN", {
-  timeZone: "Asia/Kolkata",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hour12: false,
-});
 
 const CONTROLS: { mode: RouteDeviationDemoMode; label: string }[] = [
   { mode: "normal", label: "Normal" },
@@ -67,19 +60,11 @@ export function RouteMonitor({ api, busId }: { api: AdminApi; busId: string }) {
       });
   };
 
-  const status = rs?.route_status ?? null;
-  const tone =
-    status === "MAJOR_DEVIATION"
-      ? "major"
-      : status === "MINOR_DEVIATION"
-        ? "minor"
-        : status === "NORMAL"
-          ? "ok"
-          : "na";
+  const tone = routeTone(rs?.route_status);
   return (
-    <section className="card" aria-label="Route monitor">
-      <header className="card-head">
-        <h2>Route · BUS {busId}</h2>
+    <section className="subpanel" aria-label="Route monitor">
+      <header className="panel-head">
+        <h3>Route monitor · BUS {busId}</h3>
         <span className="sim-tag">Synthetic GPS</span>
       </header>
       {error && (
@@ -135,48 +120,6 @@ export function RouteMonitor({ api, busId }: { api: AdminApi; busId: string }) {
         Demo controls move this bus’s SYNTHETIC GPS sideways in the backend simulator; the planned
         route never changes. The backend re-evaluates on the next fix.
       </p>
-    </section>
-  );
-}
-
-export function AlertsPanel({ api }: { api: AdminApi }) {
-  const [alerts, setAlerts] = useState<AlertOut[] | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    const load = () =>
-      api.alerts(true).then(
-        (a) => !cancelled && setAlerts(a),
-        () => undefined,
-      );
-    void load();
-    const id = setInterval(() => void load(), POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, [api]);
-  return (
-    <section className="card" aria-label="Active alerts">
-      <header className="card-head">
-        <h2>Active alerts</h2>
-      </header>
-      {alerts === null ? (
-        <p className="muted">Loading…</p>
-      ) : alerts.length === 0 ? (
-        <p className="muted">No active alerts.</p>
-      ) : (
-        <ul className="alerts" aria-label="Alert list">
-          {alerts.map((a) => (
-            <li key={a.id} className={`alert alert-${a.severity}`}>
-              <strong>{a.title}</strong>
-              <span>{a.body}</span>
-              <time dateTime={a.created_at} className="muted">
-                {timeFmt.format(new Date(a.created_at))}
-              </time>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   );
 }

@@ -328,6 +328,13 @@ class MissedBusService:
         commute = await self._commute.for_student(student_id)
         if commute is None:
             return None
+        return self._plan(commute)
+
+    async def for_students(self, student_ids: list[str]) -> list[StudentRecovery]:
+        """Same recovery for many students (Feature 11 alert sweep; shared comparisons)."""
+        return [self._plan(c) for c in await self._commute.for_students(student_ids)]
+
+    def _plan(self, commute: StudentCommute) -> StudentRecovery:
         now = self._clock.now()
         recovery = plan_recovery(
             commute,

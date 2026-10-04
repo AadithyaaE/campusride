@@ -22,7 +22,15 @@ SIM_START = datetime(2026, 10, 5, 7, 15, tzinfo=DEFAULT_TZ)
 
 @pytest.fixture(scope="session")
 def settings() -> Settings:
-    return Settings(_env_file=None, app_env="test", seed=SEED, mock_token_secret="test-secret")
+    # Features 3–11 tests run the fully automatic schedule; Feature 12 tests opt in to
+    # driver-controlled buses explicitly.
+    return Settings(
+        _env_file=None,
+        app_env="test",
+        seed=SEED,
+        mock_token_secret="test-secret",
+        sim_driver_controlled_buses="",
+    )
 
 
 @pytest.fixture(scope="session")

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { ApiClient } from "../../api/client";
 import type { BusOut } from "../../api/types";
-import { POLL_MS } from "../../data/liveFleet";
+import { FALLBACK_POLL_MS } from "../../data/liveFleet";
 import type { MapViewProps } from "../../map/MapView";
 import { SessionStore } from "../../session/sessionStore";
 import * as fx from "../../test/fixtures";
@@ -36,7 +36,7 @@ const flush = () => act(async () => {});
 const busMarker = (id: string) => mapProps.current?.buses.find((b) => b.id === id);
 const pollOnce = () =>
   act(async () => {
-    vi.advanceTimersByTime(POLL_MS);
+    vi.advanceTimersByTime(FALLBACK_POLL_MS); // no live socket in these tests → fallback polling
   });
 
 beforeEach(() => {
@@ -227,8 +227,9 @@ describe("Dashboard — live state from the backend", () => {
     expect(mapProps.current?.myStopId).toBe("X2"); // boarding stop highlighted
   });
 
-  it("shows the BACKEND decision and interim alerts derived from backend data", async () => {
+  it("shows the BACKEND decision and the BACKEND alerts", async () => {
     signedInApp({
+      "GET /api/v1/alerts": () => json(fx.myAlerts),
       "GET /api/v1/students/me/arrivals": () =>
         json({
           ...fx.myArrivals,
@@ -247,12 +248,11 @@ describe("Dashboard — live state from the backend", () => {
     expect(within(decision).getByRole("status")).toHaveTextContent("YES");
     expect(decision).toHaveTextContent("Can I catch bus BX7?");
     expect(decision).toHaveTextContent("Rule-based estimate from the backend");
-    const alerts = screen.getByRole("list", { name: "Alert list" });
-    expect(alerts).toHaveTextContent("Bus BX7 is running late");
-    expect(alerts).toHaveTextContent("About 7 min behind the timetable.");
-    expect(alerts).toHaveTextContent("Bus BX8 is 93% full");
-    const n = within(alerts).getAllByRole("listitem").length;
-    expect(screen.getByRole("button", { name: `Notifications (${n})` })).toBeInTheDocument();
+    const alerts = await screen.findByRole("list", { name: "Alert list" });
+    expect(alerts).toHaveTextContent("Bus BX7 is running 8 minutes late.");
+    expect(alerts).toHaveTextContent("Bus BX7 reaches your stop (Test Stop B) in 3 minutes.");
+    // the header badge counts UNREAD backend alerts (2 of 3)
+    expect(screen.getByRole("button", { name: "Notifications (2)" })).toBeInTheDocument();
   });
 
   it("shows the BACKEND bus comparison and highlights a picked bus on the map", async () => {
@@ -392,6 +392,37 @@ describe("Dashboard — live state from the backend", () => {
     expect(screen.getByRole("region", { name: "Bus options" })).toBeInTheDocument();
   });
 
+  it("polls BACKEND alerts and marks one read through the backend", async () => {
+    let n = 0;
+    let readId: string | null = null;
+    const { backend } = signedInApp({
+      "GET /api/v1/alerts": () => {
+        n += 1;
+        // a new backend alert appears on the next poll
+        return json(n === 1 ? fx.myAlerts.slice(1) : fx.myAlerts);
+      },
+      [`PATCH /api/v1/alerts/${fx.myAlerts[0]!.alert_id}/read`]: () => {
+        readId = fx.myAlerts[0]!.alert_id;
+        return json({ ...fx.myAlerts[0]!, read: true });
+      },
+    });
+    await screen.findByRole("list", { name: "Alert list" });
+    expect(screen.getByRole("button", { name: "Notifications (1)" })).toBeInTheDocument();
+    await pollOnce();
+    await flush();
+    expect(screen.getByRole("button", { name: "Notifications (2)" })).toBeInTheDocument();
+    const panel = screen.getByRole("region", { name: "Notifications" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Mark BUS APPROACHING read" }));
+    await flush();
+    expect(readId).toBe(fx.myAlerts[0]!.alert_id);
+    expect(screen.getByRole("button", { name: "Notifications (1)" })).toBeInTheDocument();
+    expect(backend.calls.some((c) => c.startsWith("GET /api/v1/alerts"))).toBe(true);
+    // the other dashboard cards stay
+    expect(screen.getByRole("region", { name: "My bus live" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Will I make my bus?" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bus options" })).toBeInTheDocument();
+  });
+
   it("shows no bus options to an unassigned student", async () => {
     signedInApp({
       "GET /api/v1/students/me/assignment": () => json(fx.unassigned),
@@ -495,11 +526,13 @@ describe("guardrails", () => {
     { query: "?raw", import: "default", eager: true },
   ) as Record<string, string>;
 
-  it("has no WebSocket implementation", () => {
+  it("opens WebSockets only in the one realtime client (Feature 14)", () => {
     expect(Object.keys(appSources).length).toBeGreaterThan(20);
     for (const [file, src] of Object.entries(appSources)) {
+      if (file === "/src/realtime/client.ts") continue;
       expect(src, file).not.toMatch(/new\s+WebSocket|socket\.io|EventSource/);
     }
+    expect(appSources["/src/realtime/client.ts"]).toMatch(/new WebSocket\(/);
   });
 
   it("has no browser-side bus simulation", () => {

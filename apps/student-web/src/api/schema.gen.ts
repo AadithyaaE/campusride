@@ -319,6 +319,106 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/driver/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Driver Me
+     * @description The driver's profile, assigned bus/route, current or next trip and live bus state.
+     */
+    get: operations["driver_me_api_v1_driver_me_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/driver/trip/start": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start Trip
+     * @description Start the driver's OWN next trip; the existing simulator then emits synthetic GPS.
+     */
+    post: operations["start_trip_api_v1_driver_trip_start_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/driver/trip/stop": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Stop Trip
+     * @description Finalize the driver's active trip where the bus is; its telemetry then stops.
+     */
+    post: operations["stop_trip_api_v1_driver_trip_stop_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/driver/simulate-gps": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Simulate Gps
+     * @description Demo control: one synthetic GPS fix for the driver's bus right now (same pipeline).
+     */
+    post: operations["simulate_gps_api_v1_driver_simulate_gps_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/driver/route": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Driver Route
+     * @description Ordered stops of the current/next trip with progress from the tracked state.
+     */
+    get: operations["driver_route_api_v1_driver_route_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/sim/status": {
     parameters: {
       query?: never;
@@ -694,7 +794,7 @@ export interface paths {
     };
     /**
      * List Alerts
-     * @description Most recent alerts first (created from backend state transitions, never from polling).
+     * @description Newest first. Students: only their own alerts. Admins: fleet/operational alerts.
      */
     get: operations["list_alerts_api_v1_alerts_get"];
     put?: never;
@@ -705,35 +805,99 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/alerts/{alert_id}/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Mark Alert Read
+     * @description Mark one alert read (idempotent). Alerts that aren't yours → 404 (nothing leaks).
+     */
+    patch: operations["mark_alert_read_api_v1_alerts__alert_id__read_patch"];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    /** AlertOut */
+    /**
+     * AlertOut
+     * @description One in-app alert (Feature 11). ``id``/``body``/``created_at`` kept for Feature 10 clients.
+     */
     AlertOut: {
-      /** Id */
-      id: string;
-      /** Type */
-      type: string;
-      severity: components["schemas"]["Severity"];
+      /** Alert Id */
+      alert_id: string;
+      type: components["schemas"]["AlertType"];
       /** Title */
       title: string;
-      /** Body */
-      body: string;
+      /** Message */
+      message: string;
+      /** Bus Id */
+      bus_id: string | null;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Route Id */
+      route_id: string | null;
+      /** Student Id */
+      student_id: string | null;
+      /** Admin Id */
+      admin_id: string | null;
+      /**
+       * Recipient
+       * @enum {string}
+       */
+      recipient: "student" | "admin";
+      severity: components["schemas"]["Severity"];
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /** Updated At */
+      updated_at: string | null;
+      /** Read */
+      read: boolean;
+      /** Resolved At */
+      resolved_at: string | null;
+      /** Active */
+      active: boolean;
       /** Payload */
       payload: {
         [key: string]: unknown;
       };
+      /** Id */
+      id: string;
+      /** Body */
+      body: string;
       /**
        * Created At
        * Format: date-time
        */
       created_at: string;
-      /** Resolved At */
-      resolved_at: string | null;
-      /** Active */
-      active: boolean;
     };
+    /**
+     * AlertType
+     * @description Feature 11 in-app alert types (Feature 10's ``deviation`` is ROUTE_DEVIATION).
+     * @enum {string}
+     */
+    AlertType:
+      | "BUS_APPROACHING"
+      | "BUS_DELAYED"
+      | "CAPACITY_WARNING"
+      | "ROUTE_DEVIATION"
+      | "MISSED_BUS"
+      | "ALTERNATIVE_BUS_AVAILABLE"
+      | "BREAKDOWN"
+      | "BROADCAST";
     /**
      * ArrivalOut
      * @description A bus serving the stop (Feature 4 matching) + its backend ETA.
@@ -1284,6 +1448,159 @@ export interface components {
       first_stop_id: string;
       /** Last Stop Id */
       last_stop_id: string;
+    };
+    /** DriverBusOut */
+    DriverBusOut: {
+      /** Id */
+      id: string;
+      /** Number */
+      number: string;
+      /** Reg No */
+      reg_no: string;
+      /** Capacity */
+      capacity: number;
+    };
+    /** DriverDashboardOut */
+    DriverDashboardOut: {
+      driver: components["schemas"]["DriverInfoOut"];
+      bus: components["schemas"]["DriverBusOut"] | null;
+      route: components["schemas"]["DriverRouteOut"] | null;
+      trip: components["schemas"]["DriverTripOut"] | null;
+      /**
+       * Trip State
+       * @enum {string}
+       */
+      trip_state: "READY" | "ACTIVE" | "COMPLETED" | "NO_TRIP" | "NO_ASSIGNMENT";
+      /**
+       * Control
+       * @enum {string}
+       */
+      control: "driver" | "schedule";
+      /** Can Start */
+      can_start: boolean;
+      /** Can Stop */
+      can_stop: boolean;
+      /** Next Stop */
+      next_stop: string | null;
+      /**
+       * Gps
+       * @enum {string}
+       */
+      gps: "LIVE" | "STALE" | "UNAVAILABLE";
+      /**
+       * Gps Source
+       * @default simulated
+       * @constant
+       */
+      gps_source: "simulated";
+      live: components["schemas"]["DriverLiveOut"] | null;
+      /** Message */
+      message: string | null;
+    };
+    /** DriverInfoOut */
+    DriverInfoOut: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /** Phone */
+      phone: string;
+    };
+    /**
+     * DriverLiveOut
+     * @description The bus's tracked state — the SAME ``BusState`` students and admins see.
+     */
+    DriverLiveOut: {
+      location: components["schemas"]["LatLonOut"];
+      /** Speed Kmh */
+      speed_kmh: number;
+      /** Heading Deg */
+      heading_deg: number | null;
+      bus_status: components["schemas"]["BusStatus"];
+      /** Current Stop */
+      current_stop: string | null;
+      /** Next Stop */
+      next_stop: string | null;
+      /** Occupancy */
+      occupancy: number;
+      /** Capacity */
+      capacity: number;
+      /** Available Seats */
+      available_seats: number;
+      /** Occupancy Percentage */
+      occupancy_percentage: number | null;
+      /** Delay Minutes */
+      delay_minutes: number;
+      /**
+       * Schedule Status
+       * @enum {string}
+       */
+      schedule_status: "on_time" | "delayed";
+      route_status: components["schemas"]["RouteStatus"] | null;
+      /** Deviation Distance M */
+      deviation_distance_m: number | null;
+      /**
+       * Last Fix At
+       * Format: date-time
+       */
+      last_fix_at: string;
+    };
+    /** DriverRouteOut */
+    DriverRouteOut: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /** Color */
+      color: string;
+      /** Route Direction Id */
+      route_direction_id: string | null;
+      direction: components["schemas"]["Direction"] | null;
+      /** Label */
+      label: string | null;
+    };
+    /** DriverRouteViewOut */
+    DriverRouteViewOut: {
+      route: components["schemas"]["DriverRouteOut"] | null;
+      /** Trip Id */
+      trip_id: string | null;
+      /** Stops */
+      stops: components["schemas"]["DriverStopOut"][];
+      bus_location: components["schemas"]["LatLonOut"] | null;
+      path: components["schemas"]["LineString"] | null;
+    };
+    /** DriverStopOut */
+    DriverStopOut: {
+      /** Seq */
+      seq: number;
+      /** Stop Id */
+      stop_id: string;
+      /** Name */
+      name: string;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "passed" | "current" | "next" | "upcoming";
+    };
+    /** DriverTripOut */
+    DriverTripOut: {
+      /** Id */
+      id: string;
+      status: components["schemas"]["TripStatus"];
+      /**
+       * Scheduled Start
+       * Format: date-time
+       */
+      scheduled_start: string;
+      /** Actual Start */
+      actual_start: string | null;
+      /** Actual End */
+      actual_end: string | null;
+      /** First Stop */
+      first_stop: string | null;
+      /** Last Stop */
+      last_stop: string | null;
     };
     /**
      * EtaBreakdownOut
@@ -2057,6 +2374,11 @@ export interface components {
       /** Events */
       events: components["schemas"]["BoardingEventOut"][];
     };
+    /**
+     * TripStatus
+     * @enum {string}
+     */
+    TripStatus: "scheduled" | "active" | "completed" | "cancelled";
     /** ValidationError */
     ValidationError: {
       /** Location */
@@ -2581,6 +2903,106 @@ export interface operations {
       };
     };
   };
+  driver_me_api_v1_driver_me_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverDashboardOut"];
+        };
+      };
+    };
+  };
+  start_trip_api_v1_driver_trip_start_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverDashboardOut"];
+        };
+      };
+    };
+  };
+  stop_trip_api_v1_driver_trip_stop_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverDashboardOut"];
+        };
+      };
+    };
+  };
+  simulate_gps_api_v1_driver_simulate_gps_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverDashboardOut"];
+        };
+      };
+    };
+  };
+  driver_route_api_v1_driver_route_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DriverRouteViewOut"];
+        };
+      };
+    };
+  };
   sim_status_api_v1_sim_status_get: {
     parameters: {
       query?: never;
@@ -3027,8 +3449,10 @@ export interface operations {
   list_alerts_api_v1_alerts_get: {
     parameters: {
       query?: {
-        /** @description Only alerts whose condition is still ongoing */
-        active?: boolean;
+        /** @description true: ongoing only · false: resolved only */
+        active?: boolean | null;
+        /** @description true: unread only · false: read only */
+        unread?: boolean | null;
         limit?: number;
       };
       header?: never;
@@ -3044,6 +3468,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["AlertOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  mark_alert_read_api_v1_alerts__alert_id__read_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        alert_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AlertOut"];
         };
       };
       /** @description Validation Error */

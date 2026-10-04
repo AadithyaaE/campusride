@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     """> this far from the planned route → MINOR_DEVIATION."""
     route_major_deviation_m: float = 150.0
     """≥ this far from the planned route → MAJOR_DEVIATION (alert)."""
+    sim_driver_controlled_buses: str = "B07"
+    """Feature 12: simulated buses (comma list) whose trips start/stop from the Driver App.
+    They wait at their first stop until the driver presses Start Trip; every other bus
+    keeps following the automatic demo schedule. Empty = all buses automatic."""
     sim_deviation_minor_offset_m: float = 100.0
     """Demo: perpendicular offset applied to simulated GPS in ``minor`` mode."""
     sim_deviation_major_offset_m: float = 300.0
@@ -82,7 +86,31 @@ class Settings(BaseSettings):
     recovery_delay_threshold_s: float = 300.0
     """Feature 9: an assigned bus this late (s behind the timetable) triggers recovery options."""
     recovery_max_alternatives: int = 3
+    # --- in-app alerts (Feature 11). Delay reuses tracking's DELAYED_AFTER_S rule. ---
+    alert_approaching_window_minutes: float = 5.0
+    """BUS_APPROACHING when the assigned bus's ETA to the boarding stop is within this window."""
+    alert_capacity_warning_percent: int = 80
+    """CAPACITY_WARNING when occupancy reaches this percentage of capacity."""
+    alert_evaluation_interval_s: float = 15.0
+    """Student alert sweep cadence in SIMULATION seconds (approaching / missed / alternative)."""
+    alert_evaluation_min_wall_s: float = 5.0
+    """…but never more often than this in wall-clock seconds (keeps 20× demos light)."""
+    alert_student_route_deviation: bool = True
+    """Also notify the assigned students when their bus enters a major route deviation."""
     """Feature 9: other recovery options listed after the recommended one."""
+    # --- real-time WebSocket push (Feature 14). Wall-clock seconds. ---
+    ws_auth_timeout_s: float = 10.0
+    """A new socket must authenticate (first message) within this time."""
+    ws_heartbeat_s: float = 20.0
+    """Server → client ``ping`` interval; clients answer ``pong``."""
+    ws_idle_timeout_s: float = 60.0
+    """Close a socket that sent nothing (not even ``pong``) for this long."""
+    ws_flush_interval_s: float = 1.0
+    """Bus updates are coalesced per bus and pushed at most once per interval."""
+    ws_overview_min_interval_s: float = 2.0
+    """Admin KPI overview push: at most once per interval, only after something changed."""
+    ws_queue_size: int = 500
+    """Per-connection send queue; a client that falls this far behind is disconnected."""
     student_location_mode: Literal["synthetic", "off"] = "synthetic"
     """``synthetic``: deterministic demo location near the boarding stop (no real GPS yet);
     ``off``: no location source → LOCATION_UNAVAILABLE."""

@@ -1,30 +1,43 @@
-"""Alerts (admin). Feature 10 adds the first producer: MAJOR route deviation."""
+"""In-app alerts (Feature 11): a student's own alerts, or the admins' fleet alerts.
+
+Alerts are created by the backend ``AlertService`` from state transitions — never by
+these endpoints. Feature 11 uses HTTP polling for the prototype; the same alert events
+(``AlertCreated``/``Updated``/``Resolved``/``Read``) can later be pushed over WebSockets.
+"""
 
 from __future__ import annotations
 
-from typing import Annotated
+from fastapi import APIRouter, Query
 
-from fastapi import APIRouter, Depends, Query
-
-from app.core.auth import Principal
-from app.deps import Container, require_role
+from app.core.errors import ForbiddenError
+from app.deps import Container, CurrentPrincipal
 from app.models.api.route_status import AlertOut
 from app.models.common import Role
 
 router = APIRouter(tags=["alerts"])
 
-Admin = Annotated[Principal, Depends(require_role(Role.ADMIN))]
+
+def _check_role(role: Role) -> None:
+    if role not in (Role.STUDENT, Role.ADMIN):
+        raise ForbiddenError("in-app alerts are for students and admins")
 
 
 @router.get("/alerts", response_model=list[AlertOut])
 async def list_alerts(
-    _: Admin,
+    principal: CurrentPrincipal,
     c: Container,
-    active: bool = Query(False, description="Only alerts whose condition is still ongoing"),
+    active: bool | None = Query(None, description="true: ongoing only · false: resolved only"),
+    unread: bool | None = Query(None, description="true: unread only · false: read only"),
     limit: int = Query(50, ge=1, le=500),
 ) -> list[AlertOut]:
-    """Most recent alerts first (created from backend state transitions, never from polling)."""
-    alerts = await c.repos.alerts.recent(limit=limit if not active else 500)
-    if active:
-        alerts = [a for a in alerts if a.resolved_at is None][:limit]
+    """Newest first. Students: only their own alerts. Admins: fleet/operational alerts."""
+    _check_role(principal.role)
+    alerts = await c.alerts().list_for(principal, active=active, unread=unread, limit=limit)
     return [AlertOut.of(a) for a in alerts]
+
+
+@router.patch("/alerts/{alert_id}/read", response_model=AlertOut)
+async def mark_alert_read(alert_id: str, principal: CurrentPrincipal, c: Container) -> AlertOut:
+    """Mark one alert read (idempotent). Alerts that aren't yours → 404 (nothing leaks)."""
+    _check_role(principal.role)
+    return AlertOut.of(await c.alerts().mark_read(principal, alert_id))
