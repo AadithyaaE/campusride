@@ -82,15 +82,45 @@ export function activeDash(over: Partial<DriverDashboard> = {}): DriverDashboard
   });
 }
 
+export const DEV_AUTH = {
+  mode: "dev",
+  development: true,
+  dev_login: true,
+  password_login: false,
+  external_provider: false,
+  oidc_issuer: null,
+};
+export const PASSWORD_AUTH = {
+  ...DEV_AUTH,
+  mode: "password",
+  development: false,
+  dev_login: false,
+  password_login: true,
+};
+
+const driverToken = (method: "dev" | "password") => ({
+  access_token: "mock.driver",
+  token_type: "bearer",
+  expires_at: "2099-01-01T00:00:00Z",
+  auth_method: method,
+  user: {
+    id: "U-D07",
+    role: "driver",
+    name: "Arun Kumar",
+    email: "driver07@campusride.demo",
+    active: true,
+  },
+});
+
 export function fakeBackend(overrides: Record<string, Handler> = {}) {
   const calls: string[] = [];
   const routes: Record<string, Handler> = {
-    "POST /api/v1/auth/mock-login": () =>
-      json({
-        access_token: "mock.driver",
-        token_type: "bearer",
-        expires_at: "2099-01-01T00:00:00Z",
-      }),
+    "GET /api/v1/auth/config": () => json(DEV_AUTH),
+    "POST /api/v1/auth/dev-login": () => json(driverToken("dev")),
+    "POST /api/v1/auth/login": (init) =>
+      (JSON.parse(String(init.body)) as { password?: string }).password === "right-password"
+        ? json(driverToken("password"))
+        : errorJson(401, "unauthorized", "invalid email or password"),
     "GET /api/v1/me": () =>
       json({ id: "U-D07", role: "driver", name: "Arun Kumar", email: "driver07@campusride.demo" }),
     "GET /api/v1/driver/me": () => json(dash()),

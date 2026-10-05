@@ -6,12 +6,11 @@ from datetime import date, datetime
 import httpx
 import pytest
 
-from app.core.auth import MockTokenService
 from app.core.clock import DEFAULT_TZ, ManualClock
 from app.core.config import BACKEND_DIR, Settings
 from app.core.events import InProcessEventBus
 from app.deps import AppContainer
-from app.main import create_app
+from app.main import build_auth, create_app
 from app.repositories.memory import memory_repositories
 from app.seed import SeedBundle, load_seed, persist_seed
 
@@ -47,14 +46,14 @@ def clock() -> ManualClock:
 async def container(settings: Settings, bundle: SeedBundle, clock: ManualClock) -> AppContainer:
     repos = memory_repositories()
     await persist_seed(repos, bundle, SERVICE_DATE, DEFAULT_TZ)
-    tokens = MockTokenService(settings.mock_token_secret, settings.mock_token_ttl_s)
+    verifier, tokens = build_auth(settings, repos.users)  # THE app auth boundary (AUTH_MODE)
     return AppContainer(
         settings=settings,
         clock=clock,
         events=InProcessEventBus(),
         repos=repos,
-        verifier=tokens,
-        mock_tokens=tokens,
+        verifier=verifier,
+        session_tokens=tokens,
     )
 
 

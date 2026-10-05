@@ -172,6 +172,10 @@ class MongoUserRepository(MongoRepository[User]):
         raw = await self._coll.find_one({"email": email.strip().lower()})
         return None if raw is None else User.from_mongo(raw)
 
+    async def by_auth_subject(self, provider: str, subject: str) -> User | None:
+        raw = await self._coll.find_one({"auth_provider": provider, "auth_subject": subject})
+        return None if raw is None else User.from_mongo(raw)
+
 
 class MongoStudentProfileRepository(MongoRepository[StudentProfile]):
     async def by_home_stop(self, stop_id: str) -> list[StudentProfile]:
@@ -205,6 +209,10 @@ class MongoBoardingEventRepository(MongoRepository[BoardingEvent]):
 
     async def delete_for_buses(self, bus_ids: Sequence[str]) -> int:
         res = await self._coll.delete_many({"bus_id": {"$in": list(bus_ids)}})
+        return res.deleted_count
+
+    async def delete_for_trips(self, trip_ids: Sequence[str]) -> int:
+        res = await self._coll.delete_many({"trip_id": {"$in": list(trip_ids)}})
         return res.deleted_count
 
 
@@ -270,6 +278,21 @@ class MongoAlertRepository(MongoRepository[Alert]):
     async def delete_for_buses(self, bus_ids: Sequence[str]) -> int:
         res = await self._coll.delete_many({"bus_id": {"$in": list(bus_ids)}})
         return res.deleted_count
+
+    async def delete_for_trips(self, bus_ids: Sequence[str], trip_ids: Sequence[str]) -> int:
+        res = await self._coll.delete_many(
+            {
+                "bus_id": {"$in": list(bus_ids)},
+                "$or": [{"trip_id": {"$in": list(trip_ids)}}, {"trip_id": None}],
+            }
+        )
+        return res.deleted_count
+
+    async def resolve_active_for_buses(self, bus_ids: Sequence[str], ts: datetime) -> int:
+        res = await self._coll.update_many(
+            {"bus_id": {"$in": list(bus_ids)}, "active": True}, {"$set": {"active": False, "resolved_at": ts}}
+        )
+        return res.modified_count
 
 
 def mongo_repositories(db: AsyncIOMotorDatabase) -> Repositories:

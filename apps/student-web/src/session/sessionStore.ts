@@ -13,10 +13,11 @@ export interface Session {
 
 const KEY = "campusride.session";
 
-/** localStorage when usable (it can throw in private mode / sandboxes). */
+/** sessionStorage when usable (it can throw in private mode / sandboxes).
+ * Feature 15: the backend token (never a password) lives only as long as the tab. */
 export function browserStorage(): Storage | null {
   try {
-    const s = window.localStorage;
+    const s = window.sessionStorage;
     const probe = "__campusride_probe__";
     s.setItem(probe, "1");
     s.removeItem(probe);

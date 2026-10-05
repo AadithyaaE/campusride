@@ -128,6 +128,10 @@ class BusStateRepository(Repository[BusState], Protocol):
 class UserRepository(Repository[User], Protocol):
     async def by_email(self, email: str) -> User | None: ...
 
+    async def by_auth_subject(self, provider: str, subject: str) -> User | None:
+        """The user linked to this external identity (Feature 15)."""
+        ...
+
 
 class StudentProfileRepository(Repository[StudentProfile], Protocol):
     async def by_home_stop(self, stop_id: str) -> list[StudentProfile]: ...
@@ -152,6 +156,10 @@ class BoardingEventRepository(Repository[BoardingEvent], Protocol):
     async def count_for_trip(self, trip_id: str) -> int: ...
 
     async def delete_for_buses(self, bus_ids: Sequence[str]) -> int: ...
+
+    async def delete_for_trips(self, trip_ids: Sequence[str]) -> int:
+        """Boardings of these trips only (a simulator reset replays ONE service date)."""
+        ...
 
 
 class DeviationRepository(Repository[Deviation], Protocol):
@@ -195,6 +203,14 @@ class AlertRepository(Repository[Alert], Protocol):
         ...
 
     async def delete_for_buses(self, bus_ids: Sequence[str]) -> int: ...
+
+    async def delete_for_trips(self, bus_ids: Sequence[str], trip_ids: Sequence[str]) -> int:
+        """Alerts of these buses tied to these trips, or to no trip (a reset replays one date)."""
+        ...
+
+    async def resolve_active_for_buses(self, bus_ids: Sequence[str], ts: datetime) -> int:
+        """Close every still-active alert of these buses (kept as history, no longer active)."""
+        ...
 
 
 class TrafficProfileRepository(Repository[TrafficProfile], Protocol): ...

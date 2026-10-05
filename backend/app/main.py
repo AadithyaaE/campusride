@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
-from app.core.auth import FirebaseVerifier, MockTokenService, TokenVerifier
+from app.core.auth import IdentityVerifier, OidcTokenVerifier, SessionTokenService, TokenVerifier, UserLookup
 from app.core.clock import Clock, RealClock, SimClock, resolve_sim_start
 from app.core.config import Settings, get_settings
 from app.core.db import Database, ensure_indexes
@@ -42,11 +42,21 @@ def build_clock(settings: Settings) -> Clock:
     )
 
 
-def build_auth(settings: Settings) -> tuple[TokenVerifier, MockTokenService | None]:
-    if settings.auth_mode == "mock":
-        tokens = MockTokenService(settings.mock_token_secret, settings.mock_token_ttl_s)
-        return tokens, tokens
-    return FirebaseVerifier(settings.firebase_project_id), None
+def build_auth(settings: Settings, users: UserLookup) -> tuple[TokenVerifier, SessionTokenService | None]:
+    """THE authentication boundary for REST and WebSocket (Feature 15), per AUTH_MODE.
+
+    Returns the identity verifier and, for dev / password modes, the session-token issuer.
+    There is no fallback: each mode accepts only its own credentials.
+    """
+    if settings.auth_mode == "oidc":
+        oidc = OidcTokenVerifier(
+            issuer=settings.oidc_issuer, audience=settings.oidc_audience, jwks_url=settings.oidc_jwks_url
+        )
+        return IdentityVerifier(oidc, users, link_by_email=settings.oidc_link_by_email), None
+    tokens = SessionTokenService(settings.auth_token_secret, settings.auth_token_ttl_s, settings.auth_mode)
+    if settings.auth_mode == "dev":
+        log.warning("AUTH_MODE=dev — DEVELOPMENT sign-in (no passwords). Never use this in production.")
+    return IdentityVerifier(tokens, users), tokens
 
 
 async def build_container(settings: Settings) -> AppContainer:
@@ -58,14 +68,15 @@ async def build_container(settings: Settings) -> AppContainer:
             "Start it with: docker compose -f infra/docker-compose.yml up -d"
         )
     await ensure_indexes(database.db, telemetry_ttl_days=settings.telemetry_ttl_days)
-    verifier, mock_tokens = build_auth(settings)
+    repos = mongo_repositories(database.db)
+    verifier, session_tokens = build_auth(settings, repos.users)
     container = AppContainer(
         settings=settings,
         clock=build_clock(settings),
         events=InProcessEventBus(),
-        repos=mongo_repositories(database.db),
+        repos=repos,
         verifier=verifier,
-        mock_tokens=mock_tokens,
+        session_tokens=session_tokens,
         database=database,
     )
     attach_simulator(container)

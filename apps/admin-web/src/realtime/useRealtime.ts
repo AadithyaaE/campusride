@@ -23,6 +23,7 @@ export function useRealtime(api: AdminApi, handlers: RealtimeHandlers): void {
       onEvent: (e) => latest.current.onEvent(e),
       onOpen: (r) => latest.current.onOpen(r),
       onStatus: (s) => latest.current.onStatus(s),
+      onUnauthorized: () => api.unauthorized(), // refused session → sign out (same as REST 401)
     });
     client.start();
     return () => client.stop();

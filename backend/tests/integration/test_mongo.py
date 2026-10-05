@@ -228,3 +228,57 @@ async def test_alert_one_active_per_series_index(repos: Repositories):
     mine = await repos.alerts.for_recipient(user_id="U-S0001", active=True)
     assert [a.episode for a in mine] == [2]
     assert await repos.alerts.delete_for_buses(["B05"]) == 2
+
+
+# ----------------------------------------------------------------------------- Features 15–16
+
+
+async def test_identity_link_and_inactive_fields(repos: Repositories, database: Database):
+    """Feature 15: provider subject lookup + its unique (provider, subject) index on MongoDB."""
+    u = await repos.users.by_email("admin1@campusride.demo")
+    assert u.active is True and u.created_at is not None and u.password_hash is None
+    await repos.users.upsert(
+        u.model_copy(update={"auth_provider": "https://idp.test", "auth_subject": "abc"})
+    )
+    assert (await repos.users.by_auth_subject("https://idp.test", "abc")).id == u.id
+    assert await repos.users.by_auth_subject("https://idp.test", "nope") is None
+    other = await repos.users.by_email("admin2@campusride.demo")
+    from pymongo.errors import DuplicateKeyError
+
+    with pytest.raises(DuplicateKeyError):
+        await database.db[Collections.USERS].update_one(
+            {"_id": other.id}, {"$set": {"auth_provider": "https://idp.test", "auth_subject": "abc"}}
+        )
+
+
+async def test_reset_scoped_deletes_and_history_queries(repos: Repositories):
+    """Feature 16: a reset touches only the replayed day; history queries hit existing indexes."""
+    from app.models import Alert, BoardingEvent
+    from app.models.common import AlertType, BoardingSource, BoardingType, Severity
+
+    trips = await repos.trips.for_bus_on("B07", SERVICE_DATE)
+    today, past = trips[0], trips[0].model_copy(update={"id": "T-PAST", "status": TripStatus.COMPLETED})
+    await repos.trips.upsert(past)
+    now = datetime(2026, 10, 5, 2, 0, tzinfo=UTC)
+    for tid in (today.id, past.id):
+        await repos.boarding_events.insert_once(
+            BoardingEvent(_id=f"BRD-{tid}", trip_id=tid, bus_id="B07", stop_id="S20", student_id="U-S0004",
+                          ts=now, type=BoardingType.BOARD, source=BoardingSource.QR)
+        )  # fmt: skip
+        await repos.alerts.upsert(
+            Alert(_id=f"A-{tid}", type=AlertType.BUS_DELAYED, severity=Severity.WARNING, title="t", body="b",
+                  created_at=now, bus_id="B07", trip_id=tid, dedup_key=f"K-{tid}")
+        )  # fmt: skip
+    await repos.alerts.upsert(
+        Alert(_id="A-none", type=AlertType.BREAKDOWN, severity=Severity.WARNING, title="t", body="b",
+              created_at=now, bus_id="B07", trip_id=None, dedup_key="K-none")
+    )  # fmt: skip
+    assert await repos.boarding_events.delete_for_trips([today.id]) == 1
+    assert await repos.alerts.delete_for_trips(["B07"], [today.id]) == 2  # today's + the trip-less one
+    assert await repos.alerts.resolve_active_for_buses(["B07"], now) == 1  # the earlier day's, kept
+    kept = await repos.alerts.get("A-T-PAST")
+    assert kept.active is False and kept.resolved_at is not None
+    mine = await repos.boarding_events.list(filter={"student_id": "U-S0004"})
+    assert [b.trip_id for b in mine] == ["T-PAST"]
+    by_bus = await repos.trips.list(filter={"bus_id": "B07", "variant_id": today.variant_id})
+    assert {t.id for t in by_bus} >= {today.id, "T-PAST"}

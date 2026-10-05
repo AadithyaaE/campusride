@@ -1,7 +1,9 @@
 /**
  * CampusRide Driver (Feature 12) — a thin control surface for the EXISTING backend.
- * The session token lives in memory only; trip state, position, speed and occupancy
- * always come from the backend (never from device storage or local simulation).
+ * Feature 15: sign-in follows the backend's `/auth/config` (development or email +
+ * password). The session token lives in memory only (nothing is persisted on the device, so
+ * no secure-storage is needed); a 401 or a refused WebSocket session (4401) signs out.
+ * Trip state, position, speed and occupancy always come from the backend.
  */
 import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
@@ -15,6 +17,7 @@ import { LoginScreen } from "./src/screens/LoginScreen";
 import { PassengersScreen } from "./src/screens/PassengersScreen";
 import { RouteScreen } from "./src/screens/RouteScreen";
 import { useDriver } from "./src/state/useDriver";
+import { SESSION_ENDED } from "./src/utils/messages";
 
 type View = "drive" | "route" | "passengers";
 
@@ -25,8 +28,18 @@ export default function App() {
 /** The app with an injectable ``fetch`` (tests use a fake backend). */
 export function AppRoot({ fetchImpl }: { fetchImpl?: typeof fetch }) {
   const [token, setToken] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const api = useMemo(
-    () => new DriverApi({ baseUrl: config.apiBaseUrl, getToken: () => token, fetchImpl }),
+    () =>
+      new DriverApi({
+        baseUrl: config.apiBaseUrl,
+        getToken: () => token,
+        onUnauthorized: () => {
+          setToken(null); // forced sign-out: say why on the sign-in screen
+          setNotice(SESSION_ENDED);
+        },
+        fetchImpl,
+      }),
     [token, fetchImpl],
   );
   return (
@@ -35,7 +48,14 @@ export function AppRoot({ fetchImpl }: { fetchImpl?: typeof fetch }) {
       {token ? (
         <SignedIn api={api} onSignOut={() => setToken(null)} />
       ) : (
-        <LoginScreen api={api} onSignedIn={setToken} />
+        <LoginScreen
+          api={api}
+          notice={notice}
+          onSignedIn={(t) => {
+            setNotice(null);
+            setToken(t);
+          }}
+        />
       )}
     </SafeAreaView>
   );

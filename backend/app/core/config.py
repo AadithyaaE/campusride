@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.clock import ALLOWED_SIM_SPEEDS
@@ -17,6 +17,7 @@ from app.core.clock import ALLOWED_SIM_SPEEDS
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = BACKEND_DIR.parent
 DEFAULT_MOCK_SECRET = "dev-only-change-me"
+"""Placeholder signing secret — accepted only outside ``APP_ENV=prod``."""
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -40,11 +41,27 @@ class Settings(BaseSettings):
     mongo_db: str = "campusride"
     telemetry_ttl_days: int = 30
 
-    # --- auth ---
-    auth_mode: Literal["mock", "firebase"] = "mock"
-    mock_token_secret: str = DEFAULT_MOCK_SECRET
-    mock_token_ttl_s: int = 7 * 24 * 3600
-    firebase_project_id: str = ""
+    # --- auth (Feature 15) — see docs/architecture.md "Authentication" ---
+    auth_mode: Literal["dev", "password", "oidc"] = "dev"
+    """``dev``: DEVELOPMENT sign-in by seeded email, no password (never in prod).
+    ``password``: first-party email + password (scrypt) → signed session token.
+    ``oidc``: ID tokens from an external OpenID Connect provider (e.g. Firebase Auth)."""
+    auth_token_secret: str = Field(
+        default=DEFAULT_MOCK_SECRET, validation_alias=AliasChoices("auth_token_secret", "mock_token_secret")
+    )
+    """HS256 key for backend-issued session tokens (dev / password modes)."""
+    auth_token_ttl_s: int = Field(
+        default=12 * 3600, gt=0, validation_alias=AliasChoices("auth_token_ttl_s", "mock_token_ttl_s")
+    )
+    oidc_issuer: str = ""
+    """e.g. ``https://securetoken.google.com/<firebase-project-id>``."""
+    oidc_audience: str = ""
+    """e.g. the Firebase project id / the OIDC client id."""
+    oidc_jwks_url: str = ""
+    """Provider signing keys, e.g. Firebase:
+    ``https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com``."""
+    oidc_link_by_email: bool = False
+    """Link a first-time external identity to the seeded user with the same VERIFIED email."""
 
     # --- clock / simulator ---
     clock_mode: Literal["sim", "real"] = "sim"
@@ -118,6 +135,12 @@ class Settings(BaseSettings):
     # --- paths ---
     seed_data_dir: Path = BACKEND_DIR / "data" / "seed"
 
+    @field_validator("auth_mode", mode="before")
+    @classmethod
+    def _legacy_auth_mode(cls, v: object) -> object:
+        """``mock`` (Features 1–14) is the development mode under its old name."""
+        return "dev" if isinstance(v, str) and v.strip().lower() == "mock" else v
+
     @field_validator("sim_speed")
     @classmethod
     def _speed_allowed(cls, v: int) -> int:
@@ -144,10 +167,15 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _cross_checks(self) -> Settings:
-        if self.auth_mode == "firebase" and not self.firebase_project_id:
-            raise ValueError("AUTH_MODE=firebase requires FIREBASE_PROJECT_ID")
-        if self.app_env == "prod" and self.auth_mode == "mock":
-            raise ValueError("AUTH_MODE=mock is not allowed when APP_ENV=prod")
+        if self.auth_mode == "oidc" and not (self.oidc_issuer and self.oidc_audience and self.oidc_jwks_url):
+            raise ValueError("AUTH_MODE=oidc requires OIDC_ISSUER, OIDC_AUDIENCE and OIDC_JWKS_URL")
+        if self.app_env == "prod":
+            if self.auth_mode == "dev":
+                raise ValueError("AUTH_MODE=dev (development sign-in) is not allowed when APP_ENV=prod")
+            if self.auth_mode == "password" and (
+                self.auth_token_secret == DEFAULT_MOCK_SECRET or len(self.auth_token_secret) < 32
+            ):
+                raise ValueError("APP_ENV=prod needs AUTH_TOKEN_SECRET (>= 32 random characters)")
         if not 0 < self.route_minor_deviation_m < self.route_major_deviation_m:
             raise ValueError("need 0 < ROUTE_MINOR_DEVIATION_M < ROUTE_MAJOR_DEVIATION_M")
         return self

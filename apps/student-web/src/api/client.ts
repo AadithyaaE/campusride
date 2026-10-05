@@ -38,10 +38,16 @@ import {
   isStopBuses,
   isStop,
   isStopService,
+  isAuthConfig,
+  isCommuteHistory,
+  isStudentCommute,
   isToken,
   type Guard,
 } from "./guards";
 import type {
+  AuthConfig,
+  CommuteHistoryOut,
+  StudentCommuteOut,
   BusEtaOut,
   BusOptionsOut,
   CommuteDecisionOut,
@@ -155,10 +161,31 @@ export class ApiClient {
     return this.request("/health", { auth: false, guard: isHealth });
   }
 
-  mockLogin(email: string): Promise<TokenOut> {
-    return this.request("/auth/mock-login", {
+  /** The session became invalid (REST 401 or WebSocket 4401): the app signs out. */
+  unauthorized(): void {
+    this.onUnauthorized?.();
+  }
+
+  /** Which sign-in this backend offers (Feature 15): development, password or external. */
+  authConfig(): Promise<AuthConfig> {
+    return this.request("/auth/config", { auth: false, guard: isAuthConfig });
+  }
+
+  /** DEVELOPMENT sign-in (AUTH_MODE=dev only) — seeded email, no password. */
+  devLogin(email: string): Promise<TokenOut> {
+    return this.request("/auth/dev-login", {
       method: "POST",
       body: { email },
+      auth: false,
+      guard: isToken,
+    });
+  }
+
+  /** Email + password sign-in (AUTH_MODE=password). */
+  passwordLogin(email: string, password: string): Promise<TokenOut> {
+    return this.request("/auth/login", {
+      method: "POST",
+      body: { email, password },
       auth: false,
       guard: isToken,
     });
@@ -283,6 +310,19 @@ export class ApiClient {
    */
   myRecoveryOptions(): Promise<RecoveryOut> {
     return this.request("/students/me/recovery-options", { guard: isRecovery });
+  }
+
+  // ---- Feature 16 — student commute experience (scoped to the signed-in student)
+
+  /** Today's commute in one call: assignment, bus, trip, decision (+ETA), recovery,
+   * boarding, own active alerts and the backend's commute phase. */
+  myCommute(): Promise<StudentCommuteOut> {
+    return this.request("/students/me/commute", { guard: isStudentCommute });
+  }
+
+  /** Recent commutes, newest first, derived by the backend from trips/boardings/alerts. */
+  myHistory(limit = 10): Promise<CommuteHistoryOut> {
+    return this.request(`/students/me/history?limit=${limit}`, { guard: isCommuteHistory });
   }
 
   /** Backend route deviation of one bus vs. its PLANNED route (Feature 10). */

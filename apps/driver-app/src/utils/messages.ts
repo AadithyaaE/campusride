@@ -1,9 +1,12 @@
 /** Short, driver-friendly messages for backend errors (never stack traces). */
 import { ApiError } from "../api/client";
 
+/** Shown on the sign-in screen after a forced sign-out (401 / refused WebSocket session). */
+export const SESSION_ENDED = "Your session has ended. Please sign in again.";
+
 const BY_CODE: Record<string, string> = {
   backend_unavailable: "Connection unavailable",
-  unauthorized: "Your session has ended. Please sign in again.",
+  unauthorized: SESSION_ENDED,
   forbidden: "This app is for drivers only.",
   invalid_driver: "No driver profile is linked to this account.",
   no_assignment: "You have no bus assigned. Please contact the transport office.",

@@ -99,6 +99,7 @@ export function useDriver(api: DriverApi, { polling }: { polling: boolean }): Dr
       onEvent: (e) => latest.current(e),
       onOpen: () => void refresh(),
       onStatus: setRealtime,
+      onUnauthorized: () => api.unauthorized(), // refused session → sign out (same as REST 401)
     });
     client.start();
     const sub = AppState.addEventListener("change", (st) => {

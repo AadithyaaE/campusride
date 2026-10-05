@@ -9,6 +9,7 @@ import type { components } from "./schema.gen";
 
 type Schemas = components["schemas"];
 export type TokenOut = Schemas["TokenOut"];
+export type AuthConfig = Schemas["AuthConfigOut"];
 export type MeOut = Schemas["MeOut"];
 export type BusOut = Schemas["BusOut"];
 export type BusLiveOut = Schemas["BusLiveOut"];
@@ -54,7 +55,10 @@ const arrayOf =
   (v): v is T[] =>
     Array.isArray(v) && v.every(g);
 
-const isToken: Guard<TokenOut> = (v): v is TokenOut => isObj(v) && isStr(v.access_token);
+const isToken: Guard<TokenOut> = (v): v is TokenOut =>
+  isObj(v) && isStr(v.access_token) && isStr(v.expires_at) && isObj(v.user);
+const isAuthConfig: Guard<AuthConfig> = (v): v is AuthConfig =>
+  isObj(v) && isStr(v.mode) && typeof v.development === "boolean";
 const isMe: Guard<MeOut> = (v): v is MeOut => isObj(v) && isStr(v.id) && isStr(v.role);
 const isLive = (v: unknown): v is BusLiveOut =>
   isObj(v) &&
@@ -170,10 +174,30 @@ export class AdminApi {
     return this.getToken();
   }
 
-  mockLogin(email: string): Promise<TokenOut> {
+  /** The session became invalid (REST 401 or WebSocket 4401): the app signs out. */
+  unauthorized(): void {
+    this.onUnauthorized?.();
+  }
+
+  /** Which sign-in this backend offers (Feature 15): development, password or external. */
+  authConfig(): Promise<AuthConfig> {
+    return this.request("/auth/config", { auth: false }, isAuthConfig);
+  }
+
+  /** DEVELOPMENT sign-in (AUTH_MODE=dev only) — seeded email, no password. */
+  devLogin(email: string): Promise<TokenOut> {
     return this.request(
-      "/auth/mock-login",
+      "/auth/dev-login",
       { method: "POST", body: { email }, auth: false },
+      isToken,
+    );
+  }
+
+  /** Email + password sign-in (AUTH_MODE=password). */
+  passwordLogin(email: string, password: string): Promise<TokenOut> {
+    return this.request(
+      "/auth/login",
+      { method: "POST", body: { email, password }, auth: false },
       isToken,
     );
   }
@@ -198,6 +222,28 @@ export class AdminApi {
   }
 
   /** Demo control: shift a simulated bus's GPS off its route (the route itself never changes). */
+  // ---- demo / simulator controls (existing /sim API; admin-only outside development)
+
+  simStatus(): Promise<SimStatusOut> {
+    return this.request("/sim/status", {}, isSimStatus);
+  }
+
+  simStart(): Promise<SimStatusOut> {
+    return this.request("/sim/start", { method: "POST" }, isSimStatus);
+  }
+
+  simPause(): Promise<SimStatusOut> {
+    return this.request("/sim/pause", { method: "POST" }, isSimStatus);
+  }
+
+  simReset(): Promise<SimStatusOut> {
+    return this.request("/sim/reset", { method: "POST" }, isSimStatus);
+  }
+
+  simSpeed(speed: number): Promise<SimStatusOut> {
+    return this.request("/sim/speed", { method: "PUT", body: { speed } }, isSimStatus);
+  }
+
   setRouteDeviation(mode: RouteDeviationDemoMode, busId: string | null): Promise<SimStatusOut> {
     return this.request(
       "/sim/route-deviation",
@@ -255,7 +301,7 @@ export class AdminApi {
 
   private async request<T>(
     path: string,
-    opts: { method?: "GET" | "POST" | "PATCH"; body?: unknown; auth?: boolean },
+    opts: { method?: "GET" | "POST" | "PATCH" | "PUT"; body?: unknown; auth?: boolean },
     guard: Guard<T>,
   ): Promise<T> {
     const headers: Record<string, string> = { Accept: "application/json" };

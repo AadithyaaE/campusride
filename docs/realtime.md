@@ -104,9 +104,10 @@ immediately.
 - **Admin**: applies `fleet.bus.updated` (map, table, panels, bus detail),
   `admin.overview.updated` (KPIs) and `alert.*`; trip events refresh routes/schedule.
 - **Student**: applies `bus.state.updated` (map/cards) and its own `alert.*`; relevant
-  `eta.updated` / `occupancy.updated` / `route.deviation` / `trip.*` re-fetch the
-  student-specific backend answers (arrivals, comparison, decision, recovery) at most once
-  per 1.5 s.
+  `eta.updated` / `occupancy.updated` / `route.deviation` / `trip.*` and its own
+  `boarding.updated` re-fetch the student-specific backend answers (arrivals, comparison and
+  — Feature 16 — today's commute) at most once per 1.5 s; Recent Commutes re-fetch only when
+  today's phase / trip / boarding changes.
 - **Driver**: applies `driver.state.updated` (speed, GPS, passengers, next stop, trip and
   route status); trip events re-fetch `/driver/me`.
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from app.core.auth import MockTokenService, sim_driver_principal
+from app.core.auth import SessionTokenService, sim_driver_principal
 from app.core.config import Settings
 from app.core.errors import AuthError, ForbiddenError
 from app.deps import require_role
@@ -22,34 +22,35 @@ class FakeNow:
 
 
 async def test_token_round_trip():
-    svc = MockTokenService("secret", ttl_s=60)
+    svc = SessionTokenService("secret", ttl_s=60, mode="dev")
     issued = svc.issue(USER)
-    p = await svc.verify(issued.token)
-    assert (p.user_id, p.role, p.email) == ("U-S0001", Role.STUDENT, "student001@campusride.demo")
+    cred = await svc.verify_credential(issued.token)
+    # the token names WHO (the user id) — role/email are looked up, never carried
+    assert (cred.subject, cred.method, cred.provider) == ("U-S0001", "dev", "campusride")
 
 
 async def test_tampered_token_rejected():
-    svc = MockTokenService("secret", ttl_s=60)
+    svc = SessionTokenService("secret", ttl_s=60, mode="dev")
     token = svc.issue(USER).token
     head, _payload, sig = token.split(".")
     forged = (
-        MockTokenService("other-secret", ttl_s=60)
+        SessionTokenService("other-secret", ttl_s=60, mode="dev")
         .issue(User(id="U-A01", role=Role.ADMIN, name="x", email="a@b.c"))
         .token.split(".")[1]
     )
     with pytest.raises(AuthError):
-        await svc.verify(f"{head}.{forged}.{sig}")
+        await svc.verify_credential(f"{head}.{forged}.{sig}")
     with pytest.raises(AuthError):
-        await svc.verify("not-a-token")
+        await svc.verify_credential("not-a-token")
 
 
 async def test_expired_token_rejected():
     now = FakeNow()
-    svc = MockTokenService("secret", ttl_s=60, now=now)
+    svc = SessionTokenService("secret", ttl_s=60, mode="dev", now=now)
     token = svc.issue(USER).token
     now.t += 61
     with pytest.raises(AuthError, match="expired"):
-        await svc.verify(token)
+        await svc.verify_credential(token)
 
 
 async def test_require_role():
@@ -79,7 +80,7 @@ def test_defaults_match_spec():
         42,
         5,
         "auto",
-        "mock",
+        "dev",
         30,
     )
     assert s.tz.key == "Asia/Kolkata"
@@ -91,7 +92,9 @@ def test_defaults_match_spec():
         {"sim_speed": 3},
         {"sim_start_date": "05-10-2026"},
         {"auth_mode": "firebase"},
-        {"app_env": "prod"},  # mock auth not allowed in prod
+        {"app_env": "prod"},  # development auth not allowed in prod
+        {"app_env": "prod", "auth_mode": "password"},  # prod needs a real AUTH_TOKEN_SECRET
+        {"auth_mode": "oidc"},  # needs issuer, audience and JWKS URL
         {"campus_timezone": "Mars/Olympus"},
     ],
 )

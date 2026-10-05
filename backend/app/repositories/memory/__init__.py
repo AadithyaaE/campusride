@@ -160,6 +160,10 @@ class MemoryUserRepository(MemoryRepository[User]):
         found = await self.list(filter={"email": email.strip().lower()}, limit=1)
         return found[0] if found else None
 
+    async def by_auth_subject(self, provider: str, subject: str) -> User | None:
+        found = await self.list(filter={"auth_provider": provider, "auth_subject": subject}, limit=1)
+        return found[0] if found else None
+
 
 class MemoryStudentProfileRepository(MemoryRepository[StudentProfile]):
     async def by_home_stop(self, stop_id: str) -> list[StudentProfile]:
@@ -198,6 +202,12 @@ class MemoryBoardingEventRepository(MemoryRepository[BoardingEvent]):
 
     async def delete_for_buses(self, bus_ids: Sequence[str]) -> int:
         doomed = [k for k, d in self._docs.items() if d.get("bus_id") in set(bus_ids)]
+        for k in doomed:
+            del self._docs[k]
+        return len(doomed)
+
+    async def delete_for_trips(self, trip_ids: Sequence[str]) -> int:
+        doomed = [k for k, d in self._docs.items() if d.get("trip_id") in set(trip_ids)]
         for k in doomed:
             del self._docs[k]
         return len(doomed)
@@ -280,6 +290,23 @@ class MemoryAlertRepository(MemoryRepository[Alert]):
         for k in doomed:
             del self._docs[k]
         return len(doomed)
+
+    async def delete_for_trips(self, bus_ids: Sequence[str], trip_ids: Sequence[str]) -> int:
+        buses, trips = set(bus_ids), set(trip_ids)
+        doomed = [
+            k
+            for k, d in self._docs.items()
+            if d.get("bus_id") in buses and (d.get("trip_id") is None or d.get("trip_id") in trips)
+        ]
+        for k in doomed:
+            del self._docs[k]
+        return len(doomed)
+
+    async def resolve_active_for_buses(self, bus_ids: Sequence[str], ts: datetime) -> int:
+        hits = [a for a in await self.list(filter={"bus_id": {"$in": list(bus_ids)}, "active": True})]
+        for a in hits:
+            await self.upsert(a.model_copy(update={"active": False, "resolved_at": ts}))
+        return len(hits)
 
 
 def memory_repositories() -> Repositories:

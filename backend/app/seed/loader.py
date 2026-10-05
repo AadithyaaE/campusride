@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import time
+from datetime import UTC, datetime, time
 from pathlib import Path
 from typing import Any
 
@@ -180,6 +180,10 @@ def load_schedule(seed_dir: Path) -> Schedule:
     )
 
 
+SEED_IDENTITY_TIME = datetime(2026, 6, 1, tzinfo=UTC)
+"""Deterministic ``created_at`` / ``updated_at`` of the seeded identities (Feature 15)."""
+
+
 def load_seed(seed_dir: Path, seed: int) -> SeedBundle:
     # local imports: these modules depend on this one
     from app.seed.assignments import generate_assignments
@@ -253,7 +257,10 @@ def load_seed(seed_dir: Path, seed: int) -> SeedBundle:
         routes=routes,
         buses=buses,
         drivers=drivers,
-        users=users + student_users,
+        users=[
+            u.model_copy(update={"created_at": SEED_IDENTITY_TIME, "updated_at": SEED_IDENTITY_TIME})
+            for u in users + student_users
+        ],
         student_profiles=profiles,
         student_assignments=assignments,
         traffic_profiles=traffic,

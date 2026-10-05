@@ -21,6 +21,43 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/auth/config": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Auth Config */
+    get: operations["auth_config_api_v1_auth_config_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/dev-login": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Dev Login
+     * @description DEVELOPMENT sign-in (AUTH_MODE=dev): seeded email, no password. Not real authentication.
+     */
+    post: operations["dev_login_api_v1_auth_dev_login_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/auth/mock-login": {
     parameters: {
       query?: never;
@@ -30,8 +67,32 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Mock Login */
+    /**
+     * Mock Login
+     * @deprecated
+     * @description Deprecated alias of ``/auth/dev-login`` (Features 1–14 clients and scripts).
+     */
     post: operations["mock_login_api_v1_auth_mock_login_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/login": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Password Login
+     * @description Email + password sign-in (AUTH_MODE=password).
+     */
+    post: operations["password_login_api_v1_auth_login_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -742,6 +803,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/students/me/commute": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My Commute
+     * @description Today's commute in ONE response: assignment, bus, trip, decision (with the ETA),
+     *     recovery, boarding, own active alerts and the backend's commute phase.
+     *
+     *     Scoped to the authenticated student; nothing here is computed by the client.
+     */
+    get: operations["my_commute_api_v1_students_me_commute_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/students/me/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * My History
+     * @description The signed-in student's recent commutes, newest first, derived from stored trips,
+     *     boarding events and missed-bus alerts. Trips that never started are not history.
+     */
+    get: operations["my_history_api_v1_students_me_history_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/boarding/scan": {
     parameters: {
       query?: never;
@@ -1346,6 +1451,27 @@ export interface components {
        */
       assigned_at: string;
     };
+    /**
+     * AuthConfigOut
+     * @description What sign-in this backend offers — clients render the matching form.
+     */
+    AuthConfigOut: {
+      /**
+       * Mode
+       * @enum {string}
+       */
+      mode: "dev" | "password" | "oidc";
+      /** Development */
+      development: boolean;
+      /** Dev Login */
+      dev_login: boolean;
+      /** Password Login */
+      password_login: boolean;
+      /** External Provider */
+      external_provider: boolean;
+      /** Oidc Issuer */
+      oidc_issuer: string | null;
+    };
     /** BoardingEventOut */
     BoardingEventOut: {
       /** Boarding Id */
@@ -1432,6 +1558,11 @@ export interface components {
       /** Message */
       message: string;
     };
+    /**
+     * BoardingSource
+     * @enum {string}
+     */
+    BoardingSource: "qr" | "sim";
     /** BoardingStopOut */
     BoardingStopOut: {
       /** Stop Id */
@@ -1784,6 +1915,85 @@ export interface components {
        */
       computed_at: string;
     };
+    /** CommuteHistoryEntryOut */
+    CommuteHistoryEntryOut: {
+      /** Trip Id */
+      trip_id: string;
+      /**
+       * Service Date
+       * Format: date
+       */
+      service_date: string;
+      /** Bus Id */
+      bus_id: string;
+      /** Route Id */
+      route_id: string;
+      /** Route Name */
+      route_name: string | null;
+      /** Route Direction Id */
+      route_direction_id: string;
+      direction: components["schemas"]["Direction"];
+      /** Direction Label */
+      direction_label: string | null;
+      boarding_stop: components["schemas"]["StopSummaryOut"] | null;
+      /**
+       * Scheduled Departure
+       * Format: date-time
+       */
+      scheduled_departure: string;
+      /** Actual Start */
+      actual_start: string | null;
+      /** Actual End */
+      actual_end: string | null;
+      trip_status: components["schemas"]["TripStatus"];
+      /** End Reason */
+      end_reason: ("terminal" | "driver_stop") | null;
+      /**
+       * Outcome
+       * @enum {string}
+       */
+      outcome:
+        "boarded" | "in_progress" | "missed" | "ended_early" | "no_boarding_recorded" | "cancelled";
+      /** Boarded */
+      boarded: boolean;
+      /** Boarding Time */
+      boarding_time: string | null;
+      boarding_source: components["schemas"]["BoardingSource"] | null;
+      /** Scanner */
+      scanner: ("simulated" | "camera") | null;
+    };
+    /** CommuteHistoryOut */
+    CommuteHistoryOut: {
+      /** Student Id */
+      student_id: string;
+      /** Entries */
+      entries: components["schemas"]["CommuteHistoryEntryOut"][];
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string;
+    };
+    /** CommuteTripOut */
+    CommuteTripOut: {
+      /** Trip Id */
+      trip_id: string;
+      status: components["schemas"]["TripStatus"];
+      /** Route Direction Id */
+      route_direction_id: string;
+      direction: components["schemas"]["Direction"];
+      /**
+       * Scheduled Start
+       * Format: date-time
+       */
+      scheduled_start: string;
+      /** Actual Start */
+      actual_start: string | null;
+      /** Actual End */
+      actual_end: string | null;
+      /** End Reason */
+      end_reason: ("terminal" | "driver_stop") | null;
+    };
     /** DelaySummaryOut */
     DelaySummaryOut: {
       /** Buses Measured */
@@ -1792,6 +2002,19 @@ export interface components {
       fleet_avg_delay_min: number | null;
       /** By Route */
       by_route: components["schemas"]["LabelValueOut"][];
+    };
+    /**
+     * DevLoginIn
+     * @description DEVELOPMENT sign-in: a seeded identity's email (AUTH_MODE=dev only).
+     */
+    DevLoginIn: {
+      /**
+       * Email
+       * @example student001@campusride.demo
+       * @example driver07@campusride.demo
+       * @example admin1@campusride.demo
+       */
+      email: string;
     };
     /**
      * Direction
@@ -2164,16 +2387,8 @@ export interface components {
       name: string;
       /** Email */
       email: string;
-    };
-    /** MockLoginIn */
-    MockLoginIn: {
-      /**
-       * Email
-       * @example student001@campusride.demo
-       * @example driver01@campusride.demo
-       * @example admin1@campusride.demo
-       */
-      email: string;
+      /** Active */
+      active: boolean;
     };
     /** MyArrivalsOut */
     MyArrivalsOut: {
@@ -2323,6 +2538,13 @@ export interface components {
       source: "synthetic_baseline+qr" | "qr" | "no_live_data";
       /** Updated At */
       updated_at: string | null;
+    };
+    /** PasswordLoginIn */
+    PasswordLoginIn: {
+      /** Email */
+      email: string;
+      /** Password */
+      password: string;
     };
     /** RecoveryOptionOut */
     RecoveryOptionOut: {
@@ -2769,6 +2991,48 @@ export interface components {
       /** Name */
       name: string;
     };
+    /**
+     * StudentCommuteOut
+     * @description Everything "Today's Commute" shows, decided by the backend, for the signed-in student.
+     */
+    StudentCommuteOut: {
+      /** Student Id */
+      student_id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "assigned" | "unassigned";
+      /**
+       * Phase
+       * @enum {string}
+       */
+      phase:
+        | "unassigned"
+        | "no_trip"
+        | "waiting"
+        | "approaching"
+        | "at_stop"
+        | "on_board"
+        | "completed"
+        | "missed"
+        | "recovery_available";
+      /** Phase Reason */
+      phase_reason: string;
+      assignment: components["schemas"]["AssignmentOut"] | null;
+      bus: components["schemas"]["BusOut"] | null;
+      trip: components["schemas"]["CommuteTripOut"] | null;
+      decision: components["schemas"]["CommuteDecisionOut"];
+      recovery: components["schemas"]["RecoveryOut"];
+      boarding: components["schemas"]["MyBoardingOut"];
+      /** Alerts */
+      alerts: components["schemas"]["AlertOut"][];
+      /**
+       * Computed At
+       * Format: date-time
+       */
+      computed_at: string;
+    };
     /** StudentLocationOut */
     StudentLocationOut: {
       location: components["schemas"]["GeoPoint"];
@@ -2857,6 +3121,11 @@ export interface components {
        * Format: date-time
        */
       expires_at: string;
+      /**
+       * Auth Method
+       * @enum {string}
+       */
+      auth_method: "dev" | "password";
       user: components["schemas"]["MeOut"];
     };
     /** TripBoardingOut */
@@ -2953,6 +3222,59 @@ export interface operations {
       };
     };
   };
+  auth_config_api_v1_auth_config_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AuthConfigOut"];
+        };
+      };
+    };
+  };
+  dev_login_api_v1_auth_dev_login_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DevLoginIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TokenOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   mock_login_api_v1_auth_mock_login_post: {
     parameters: {
       query?: never;
@@ -2962,7 +3284,40 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["MockLoginIn"];
+        "application/json": components["schemas"]["DevLoginIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TokenOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  password_login_api_v1_auth_login_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordLoginIn"];
       };
     };
     responses: {
@@ -3885,6 +4240,57 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RecoveryOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  my_commute_api_v1_students_me_commute_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StudentCommuteOut"];
+        };
+      };
+    };
+  };
+  my_history_api_v1_students_me_history_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CommuteHistoryOut"];
         };
       };
       /** @description Validation Error */

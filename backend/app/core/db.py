@@ -65,6 +65,13 @@ INDEXES: dict[str, list[IndexModel]] = {
             unique=True,
             partialFilterExpression={"firebase_uid": {"$type": "string"}},
         ),
+        # Feature 15: one user per external identity (provider + subject)
+        IndexModel(
+            [("auth_provider", ASCENDING), ("auth_subject", ASCENDING)],
+            name="auth_subject_unique",
+            unique=True,
+            partialFilterExpression={"auth_subject": {"$type": "string"}},
+        ),
     ],
     Collections.DRIVERS: [IndexModel([("user_id", ASCENDING)], name="user_id", unique=True)],
     Collections.STUDENT_PROFILES: [IndexModel([("home_stop_id", ASCENDING)], name="home_stop_id")],

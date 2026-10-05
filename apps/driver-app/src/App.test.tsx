@@ -7,6 +7,7 @@ import { activeDash, dash, errorJson, fakeBackend, json, type Handler } from "./
 async function signIn(overrides: Record<string, Handler> = {}) {
   const backend = fakeBackend(overrides);
   await render(<AppRoot fetchImpl={backend.fetchImpl} />);
+  await screen.findByText(/Demo sign-in/); // options from GET /auth/config
   await fireEvent.press(screen.getByRole("button", { name: "SIGN IN" }));
   return backend;
 }
@@ -17,10 +18,10 @@ describe("Driver App — backend-driven (Feature 12)", () => {
   it("shows the driver's backend assignment and READY state", async () => {
     await signIn();
     expect(await screen.findByText("Arun Kumar")).toBeTruthy();
-    expect(screen.getByText("Bus B07")).toBeTruthy();
+    expect(screen.getByText("BUS B07")).toBeTruthy();
     expect(screen.getByText("R4 — To Campus")).toBeTruthy();
     expect(screen.getByText("READY")).toBeTruthy();
-    expect(screen.getByLabelText("NEXT STOP: Guindy")).toBeTruthy();
+    expect(screen.getByLabelText("FIRST STOP: Guindy")).toBeTruthy();
     expect(await startButton()).toBeTruthy();
     expect(screen.queryByRole("button", { name: "STOP TRIP" })).toBeNull();
   });
@@ -28,10 +29,10 @@ describe("Driver App — backend-driven (Feature 12)", () => {
   it("starts the trip through the backend and shows the ACTIVE state it returns", async () => {
     const backend = await signIn();
     await fireEvent.press(await startButton());
-    expect(await screen.findByText("ACTIVE")).toBeTruthy();
+    expect(await screen.findByText("DRIVING")).toBeTruthy();
     expect(backend.calls).toContain("POST /api/v1/driver/trip/start");
     expect(screen.getByLabelText("SPEED: 32 km/h")).toBeTruthy();
-    expect(screen.getByLabelText("PASSENGERS: 38 / 50")).toBeTruthy();
+    expect(screen.getByLabelText("PASSENGERS: 38 / 50 · 12 seats free")).toBeTruthy();
     expect(screen.getByLabelText("NEXT STOP: Library Gate")).toBeTruthy();
     expect(screen.getByLabelText("GPS: LIVE, simulated")).toBeTruthy();
     expect(screen.getByText("SIMULATED GPS")).toBeTruthy();
@@ -46,7 +47,7 @@ describe("Driver App — backend-driven (Feature 12)", () => {
     await fireEvent.press(await startButton());
     expect(await screen.findByText("Trip could not be started. Please try again.")).toBeTruthy();
     expect(screen.getByText("READY")).toBeTruthy();
-    expect(screen.queryByText("ACTIVE")).toBeNull();
+    expect(screen.queryByText("DRIVING")).toBeNull();
   });
 
   it("shows a driver-friendly message for a duplicate start", async () => {
@@ -118,7 +119,7 @@ describe("Driver App — backend-driven (Feature 12)", () => {
     expect(await screen.findByLabelText("Stop 3: Library Gate, next")).toBeTruthy();
     expect(screen.getByLabelText("Stop 1: Guindy, passed")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "BACK" }));
-    expect(await screen.findByText("ACTIVE")).toBeTruthy();
+    expect(await screen.findByText("DRIVING")).toBeTruthy();
   });
 
   it("handles no assignment", async () => {
@@ -165,7 +166,7 @@ describe("Driver App — backend-driven (Feature 12)", () => {
       },
     });
     expect(await screen.findByText("Connection unavailable")).toBeTruthy();
-    expect(screen.queryByText("ACTIVE")).toBeNull();
+    expect(screen.queryByText("DRIVING")).toBeNull();
   });
 
   it("shows a session message on 401", async () => {

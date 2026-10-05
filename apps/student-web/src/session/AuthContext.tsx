@@ -21,7 +21,8 @@ export type AuthState =
 
 interface AuthApi {
   state: AuthState;
-  login: (email: string) => Promise<void>;
+  /** `password === null` → development sign-in (AUTH_MODE=dev). */
+  login: (email: string, password: string | null) => Promise<void>;
   logout: () => void;
   retry: () => void;
 }
@@ -29,7 +30,7 @@ interface AuthApi {
 const AuthContext = createContext<AuthApi | null>(null);
 
 export const STUDENT_ONLY_MESSAGE =
-  "This is the CampusRide student app. Please sign in with a student account.";
+  "This isn't a student account. Transport staff can sign in by choosing Admin above.";
 
 /**
  * Session lifecycle. On startup (and on every refresh) the stored token is
@@ -84,8 +85,11 @@ export function AuthProvider({ store, children }: { store: SessionStore; childre
   );
 
   const login = useCallback(
-    async (email: string) => {
-      const res = await api.mockLogin(email.trim());
+    async (email: string, password: string | null) => {
+      const res =
+        password === null
+          ? await api.devLogin(email.trim())
+          : await api.passwordLogin(email.trim(), password);
       if (res.user.role !== "student") throw new Error(STUDENT_ONLY_MESSAGE);
       store.set({ token: res.access_token, expiresAt: res.expires_at, userId: res.user.id });
       setState({ status: "signedIn", me: res.user });

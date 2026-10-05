@@ -11,6 +11,7 @@ dependencies = [
   "motor>=3.5,<4",
   "pyyaml>=6.0",
   "tzdata>=2024.1", # IANA zones for zoneinfo on Windows (Asia/Kolkata)
+  "PyJWT[crypto]>=2.8,<3", # Feature 15: session tokens (HS256) + external OIDC ID tokens (RS256/JWKS)
 ]
 
 [project.optional-dependencies]

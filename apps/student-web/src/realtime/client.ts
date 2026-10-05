@@ -5,7 +5,7 @@
  * - Answers the server's `ping` with `pong`; a silent socket (no message for
  *   2.5 × heartbeat) is closed and reconnected.
  * - Reconnects with backoff 1 s → 2 s → 4 s → 8 s → 16 s → 30 s (capped); never in a loop.
- *   A refused token (4401) stops retrying.
+ *   A refused token (4401) stops retrying and calls `onUnauthorized` (the app signs out).
  * - Drops duplicates (event id) and stale envelopes (seq not newer than the last one).
  * - `onOpen` fires after every successful (re)authentication: callers re-fetch the
  *   authoritative REST state once, because events are never the only source of truth.
@@ -51,6 +51,8 @@ export interface RealtimeOptions {
   onStatus?: (s: RealtimeStatus) => void;
   /** After every successful (re)connection; `reconnect` is false the first time. */
   onOpen?: (reconnect: boolean) => void;
+  /** The backend refused the session (invalid / expired token, disabled account). */
+  onUnauthorized?: () => void;
   backoffMs?: number[];
 }
 
@@ -134,7 +136,11 @@ export class RealtimeClient {
       this.ws = null;
       if (this.watchdog) clearTimeout(this.watchdog);
       this.setStatus("offline");
-      if (ev.code === CLOSE_UNAUTHORIZED) return; // token refused: REST will sign the user out
+      if (ev.code === CLOSE_UNAUTHORIZED) {
+        this.stopped = true; // never retry a refused session
+        this.opts.onUnauthorized?.();
+        return;
+      }
       this.scheduleReconnect();
     };
   }

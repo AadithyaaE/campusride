@@ -13,7 +13,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.core.auth import MockTokenService, Principal, TokenVerifier
+from app.core.auth import Principal, SessionTokenService, TokenVerifier
 from app.core.clock import Clock
 from app.core.config import Settings
 from app.core.db import Database
@@ -35,6 +35,7 @@ from app.services.matching import MatchingService
 from app.services.missed_bus_service import MissedBusService
 from app.services.ridership import RidershipLedger
 from app.services.route_anomaly_service import RouteAnomalyService
+from app.services.student_commute_service import StudentCommuteService
 from app.services.student_location import StudentLocationSource
 from app.services.tracking import TelemetryIngestService
 
@@ -46,7 +47,8 @@ class AppContainer:
     events: EventBus
     repos: Repositories
     verifier: TokenVerifier
-    mock_tokens: MockTokenService | None = None
+    session_tokens: SessionTokenService | None = None
+    """Backend session-token issuer (AUTH_MODE dev / password); None for oidc."""
     database: Database | None = None
     ingest: TelemetryIngestService | None = None
     """The ONE telemetry ingestion path (driver API + simulator)."""
@@ -148,6 +150,10 @@ class AppContainer:
         self.telemetry_ingest()
         assert self.ridership_ledger is not None
         return self.ridership_ledger
+
+    def student_commute(self) -> StudentCommuteService:
+        """Feature 16 — today's commute + history over the existing student services."""
+        return StudentCommuteService(self.repos, self.clock, self.recovery(), self.boarding(), self.alerts())
 
     def admin(self) -> AdminService:
         """Feature 13 — admin dashboard read models over the existing services."""

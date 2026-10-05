@@ -27,7 +27,7 @@ EXPO_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1   # Android emulator: http
                                                         # phone (Expo Go): http://<PC LAN IP>:8000/api/v1
 ```
 
-**Demo account** (mock auth, no password): `driver07@campusride.demo` → **Arun Kumar**,
+**Demo account** (development sign-in, no password, `AUTH_MODE=dev`; email + password with `AUTH_MODE=password`): `driver07@campusride.demo` → **Arun Kumar**,
 **Bus B07**, route **R4 Guindy – Taramani**. B07 is the driver-controlled bus by default
 (`SIM_DRIVER_CONTROLLED_BUSES=B07` on the backend). Other seeded drivers
 (`driver01…12@campusride.demo`) can sign in too; their buses follow the automatic demo
@@ -43,15 +43,15 @@ TelemetryIngestService (same path as POST /driver/telemetry) ──▶ tracking 
                        (Student and Admin dashboards read the SAME BusState)
 ```
 
-| Screen                   | Backend                                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------------------- |
-| Sign in                  | `POST /auth/mock-login`, `GET /me` (drivers only)                                         |
-| Driving (READY / ACTIVE) | `GET /driver/me` — profile, bus, route, trip, speed, GPS freshness, passengers, next stop |
-| START TRIP               | `POST /driver/trip/start` — the backend starts the driver's own next trip                 |
-| STOP TRIP                | `POST /driver/trip/stop` — the trip is finalized where the bus is; telemetry stops        |
-| SIMULATE GPS             | `POST /driver/simulate-gps` — the backend simulator emits one extra fix now               |
-| View route               | `GET /driver/route` — ordered stops, passed / current / next                              |
-| Passengers               | `GET /buses/{id}/occupancy` (Feature 8) + `GET /trips/{id}/boarding` (count)              |
+| Screen                   | Backend                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| Sign in                  | `GET /auth/config`, `POST /auth/dev-login` or `POST /auth/login`, `GET /me` (drivers only) |
+| Driving (READY / ACTIVE) | `GET /driver/me` — profile, bus, route, trip, speed, GPS freshness, passengers, next stop  |
+| START TRIP               | `POST /driver/trip/start` — the backend starts the driver's own next trip                  |
+| STOP TRIP                | `POST /driver/trip/stop` — the trip is finalized where the bus is; telemetry stops         |
+| SIMULATE GPS             | `POST /driver/simulate-gps` — the backend simulator emits one extra fix now                |
+| View route               | `GET /driver/route` — ordered stops, passed / current / next                               |
+| Passengers               | `GET /buses/{id}/occupancy` (Feature 8) + `GET /trips/{id}/boarding` (count)               |
 
 - The UI changes only after the backend confirms an action; on failure it shows a short
   message ("Trip could not be started. Please try again.") and re-reads the real state.
@@ -77,5 +77,5 @@ npm run gen:api          # regenerate src/api/schema.gen.ts from a running backe
 - Synthetic GPS only. Real phone GPS (`expo-location`, background location, batching to
   `POST /driver/telemetry`) is a future feature — the backend ingestion path already exists.
 - Polling (3 s) instead of WebSockets.
-- Mock authentication (prototype).
+- External-provider (OIDC) sign-in has no UI in the app yet; the token is kept in memory only (re-sign-in after an app restart).
 - No map in the app (a stop list is enough for the driver); the web apps draw the map.

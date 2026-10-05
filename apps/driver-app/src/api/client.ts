@@ -9,6 +9,7 @@ import type { components } from "./schema.gen";
 type Schemas = components["schemas"];
 export type TokenOut = Schemas["TokenOut"];
 export type MeOut = Schemas["MeOut"];
+export type AuthConfig = Schemas["AuthConfigOut"];
 export type DriverDashboard = Schemas["DriverDashboardOut"];
 export type DriverRouteView = Schemas["DriverRouteViewOut"];
 export type Occupancy = Schemas["OccupancyOut"];
@@ -37,7 +38,10 @@ const isInt = (v: unknown): v is number => typeof v === "number" && Number.isInt
 const TRIP_STATES = ["READY", "ACTIVE", "COMPLETED", "NO_TRIP", "NO_ASSIGNMENT"];
 const GPS_STATES = ["LIVE", "STALE", "UNAVAILABLE"];
 
-const isToken: Guard<TokenOut> = (v): v is TokenOut => isObj(v) && isStr(v.access_token);
+const isToken: Guard<TokenOut> = (v): v is TokenOut =>
+  isObj(v) && isStr(v.access_token) && isStr(v.expires_at) && isObj(v.user);
+const isAuthConfig: Guard<AuthConfig> = (v): v is AuthConfig =>
+  isObj(v) && isStr(v.mode) && typeof v.development === "boolean";
 const isMe: Guard<MeOut> = (v): v is MeOut => isObj(v) && isStr(v.id) && isStr(v.role);
 export const isDashboard: Guard<DriverDashboard> = (v): v is DriverDashboard =>
   isObj(v) &&
@@ -62,6 +66,8 @@ const isTripBoarding: Guard<TripBoarding> = (v): v is TripBoarding =>
 export interface DriverApiOptions {
   baseUrl: string;
   getToken?: () => string | null;
+  /** The session became invalid (REST 401 / WebSocket 4401): sign out. */
+  onUnauthorized?: () => void;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
@@ -69,12 +75,14 @@ export interface DriverApiOptions {
 export class DriverApi {
   private readonly baseUrl: string;
   private readonly getToken: () => string | null;
+  private readonly onUnauthorized?: () => void;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
 
   constructor(opts: DriverApiOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
     this.getToken = opts.getToken ?? (() => null);
+    this.onUnauthorized = opts.onUnauthorized;
     this.fetchImpl = opts.fetchImpl ?? ((...args) => globalThis.fetch(...args));
     this.timeoutMs = opts.timeoutMs ?? 10_000;
   }
@@ -88,10 +96,30 @@ export class DriverApi {
     return this.getToken();
   }
 
-  mockLogin(email: string): Promise<TokenOut> {
-    return this.request("/auth/mock-login", isToken, {
+  /** The session became invalid (REST 401 or WebSocket 4401): the app signs out. */
+  unauthorized(): void {
+    this.onUnauthorized?.();
+  }
+
+  /** Which sign-in this backend offers (Feature 15): development, password or external. */
+  authConfig(): Promise<AuthConfig> {
+    return this.request("/auth/config", isAuthConfig, { auth: false });
+  }
+
+  /** DEVELOPMENT sign-in (AUTH_MODE=dev only) — seeded email, no password. */
+  devLogin(email: string): Promise<TokenOut> {
+    return this.request("/auth/dev-login", isToken, {
       method: "POST",
       body: { email },
+      auth: false,
+    });
+  }
+
+  /** Email + password sign-in (AUTH_MODE=password). */
+  passwordLogin(email: string, password: string): Promise<TokenOut> {
+    return this.request("/auth/login", isToken, {
+      method: "POST",
+      body: { email, password },
       auth: false,
     });
   }
@@ -157,6 +185,7 @@ export class DriverApi {
     const data: unknown = await res.json().catch(() => null);
     if (!res.ok) {
       const err = isObj(data) && isObj(data.error) ? data.error : {};
+      if (res.status === 401 && opts.auth !== false) this.onUnauthorized?.();
       throw new ApiError(
         res.status,
         isStr(err.code) ? err.code : "http_error",
