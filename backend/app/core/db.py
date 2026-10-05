@@ -7,6 +7,7 @@ else imports it, so swapping the driver later touches only those two places.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
@@ -117,6 +118,14 @@ INDEXES: dict[str, list[IndexModel]] = {
         IndexModel([("audience.user_id", ASCENDING)], name="aud_user"),
     ],
 }
+
+
+_URI_USERINFO = re.compile(r"(?<=://)[^@/]+@")
+
+
+def redact_uri(uri: str) -> str:
+    """``mongodb+srv://user:pw@host/…`` → ``mongodb+srv://***@host/…`` — safe to log."""
+    return _URI_USERINFO.sub("***@", uri)
 
 
 class Database:

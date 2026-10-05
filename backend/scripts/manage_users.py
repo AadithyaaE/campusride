@@ -21,7 +21,7 @@ import sys
 from datetime import UTC, datetime
 
 from app.core.config import get_settings
-from app.core.db import Database
+from app.core.db import Database, redact_uri
 from app.core.passwords import hash_password
 from app.repositories.mongo import mongo_repositories
 
@@ -41,7 +41,7 @@ async def run(args: argparse.Namespace) -> int:
     database = Database(settings.mongo_uri, settings.mongo_db)
     try:
         if not await database.ping():
-            print(f"MongoDB not reachable at {settings.mongo_uri}")
+            print(f"MongoDB not reachable at {redact_uri(settings.mongo_uri)}")
             return 2
         users = mongo_repositories(database.db).users
         now = datetime.now(UTC)

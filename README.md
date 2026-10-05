@@ -8,7 +8,7 @@ entirely on **deterministic synthetic data**: a fictional campus on the real
 Chennai road network, simulated buses, simulated GPS, development sign-in by default (real password / OIDC authentication configurable). No paid APIs,
 no Firebase project, no GPS hardware.
 
-Architecture and decisions: [docs/architecture.md](docs/architecture.md).
+Architecture and decisions: [docs/architecture.md](docs/architecture.md). Cloud deployment (Render · MongoDB Atlas · Vercel · Expo EAS): [docs/deployment.md](docs/deployment.md).
 
 ## Status
 

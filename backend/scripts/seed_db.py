@@ -16,7 +16,7 @@ from datetime import date
 
 from app.core.clock import resolve_sim_start
 from app.core.config import get_settings
-from app.core.db import Database, ensure_indexes
+from app.core.db import Database, ensure_indexes, redact_uri
 from app.repositories.mongo import mongo_repositories
 from app.seed import load_seed, persist_seed, validate_bundle
 
@@ -35,7 +35,7 @@ async def run(service_date: date | None, dry_run: bool) -> int:
         service_date = resolve_sim_start(settings.sim_start_date, settings.sim_start_time, settings.tz).date()
     if dry_run:
         print(
-            f"seed valid; would load into {settings.mongo_uri}/{settings.mongo_db} "
+            f"seed valid; would load into {redact_uri(settings.mongo_uri)}/{settings.mongo_db} "
             f"for service date {service_date}"
         )
         return 0
@@ -44,7 +44,7 @@ async def run(service_date: date | None, dry_run: bool) -> int:
     try:
         if not await database.ping():
             print(
-                f"MongoDB not reachable at {settings.mongo_uri}. "
+                f"MongoDB not reachable at {redact_uri(settings.mongo_uri)}. "
                 "Start it: docker compose -f infra/docker-compose.yml up -d"
             )
             return 2

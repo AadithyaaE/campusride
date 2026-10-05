@@ -20,6 +20,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.*.example
 
 # Generated data (re-creatable from seed + scripts)
 backend/data/generated/*
@@ -34,3 +35,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Generated demo videos / marketing renders (re-creatable, large)
+brag-output/

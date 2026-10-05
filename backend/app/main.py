@@ -19,7 +19,7 @@ from app.api.v1 import api_router
 from app.core.auth import IdentityVerifier, OidcTokenVerifier, SessionTokenService, TokenVerifier, UserLookup
 from app.core.clock import Clock, RealClock, SimClock, resolve_sim_start
 from app.core.config import Settings, get_settings
-from app.core.db import Database, ensure_indexes
+from app.core.db import Database, ensure_indexes, redact_uri
 from app.core.errors import install_exception_handlers
 from app.core.events import InProcessEventBus
 from app.deps import AppContainer
@@ -64,8 +64,12 @@ async def build_container(settings: Settings) -> AppContainer:
     if not await database.ping():
         database.close()
         raise RuntimeError(
-            f"MongoDB is not reachable at {settings.mongo_uri}. "
-            "Start it with: docker compose -f infra/docker-compose.yml up -d"
+            f"MongoDB is not reachable at {redact_uri(settings.mongo_uri)}. "
+            + (
+                "Check MONGO_URI, the database user and the Atlas Network Access list."
+                if settings.app_env == "prod"
+                else "Start it with: docker compose -f infra/docker-compose.yml up -d"
+            )
         )
     await ensure_indexes(database.db, telemetry_ttl_days=settings.telemetry_ttl_days)
     repos = mongo_repositories(database.db)

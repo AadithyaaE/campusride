@@ -1,0 +1,32 @@
+# Render Blueprint — CampusRide backend (FastAPI + WebSockets). No secrets in this file:
+# values marked `sync: false` are entered in the Render dashboard. See docs/deployment.md.
+services:
+  - type: web
+    name: campusride-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: APP_ENV
+        value: prod
+      - key: AUTH_MODE
+        value: password
+      - key: CLOCK_MODE
+        value: real
+      - key: SIM_ENABLED
+        value: "false"
+      - key: SIM_AUTOSTART
+        value: "false"
+      - key: MONGO_DB
+        value: campusride
+      - key: MONGO_URI
+        sync: false
+      - key: AUTH_TOKEN_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
