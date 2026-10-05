@@ -1,85 +1,79 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { useApi } from "../api/ApiContext";
+import type { AuthConfig } from "../api/types";
+import { config } from "../config";
 import { describeError } from "../lib/errors";
 import { useAuth } from "./AuthContext";
+import { RoleSignIn } from "./RoleSignIn";
 
 const DEFAULT_EMAIL = "student001@campusride.demo";
 
+const errorText = (err: unknown) =>
+  err instanceof Error ? describeError(err).detail : String(err);
+
 /**
- * Mock sign-in (AUTH_MODE=mock): exchanges a seeded account's email for a
- * token via `POST /auth/mock-login`. Firebase replaces this in Phase 7.
+ * Student sign-in (Feature 15) on the shared CampusRide sign-in page. The backend's
+ * `GET /auth/config` decides the form:
+ * - AUTH_MODE=dev      → DEVELOPMENT sign-in: a seeded email, no password, clearly labelled;
+ * - AUTH_MODE=password → email + password (`POST /auth/login`);
+ * - AUTH_MODE=oidc     → external provider sign-in, not available in this app yet.
+ * Only student accounts are accepted here (checked against the backend's answer).
  */
 export function LoginScreen() {
+  const api = useApi();
   const { login } = useAuth();
-  // Dev-only demo deep link: /?login=student042@campusride.demo signs in directly.
+  const [cfg, setCfg] = useState<AuthConfig | null>(null);
+  const [cfgError, setCfgError] = useState<string | null>(null);
+  // Dev-only demo deep link: /?login=student042@campusride.demo (development sign-in only).
   const [autoEmail] = useState(() =>
     import.meta.env.DEV ? new URLSearchParams(window.location.search).get("login") : null,
   );
-  const [email, setEmail] = useState(autoEmail ?? DEFAULT_EMAIL);
-  const [busy, setBusy] = useState(autoEmail !== null);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async (value: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await login(value);
-    } catch (err) {
-      setError(err instanceof Error ? describeError(err).detail : String(err));
-      setBusy(false);
-    }
-  };
+  const [autoBusy, setAutoBusy] = useState(false);
 
   useEffect(() => {
-    if (!autoEmail) return;
-    login(autoEmail).catch((err: unknown) => {
-      setError(err instanceof Error ? describeError(err).detail : String(err));
-      setBusy(false);
-    });
-  }, [autoEmail, login]);
+    let cancelled = false;
+    api.authConfig().then(
+      (c) => {
+        if (cancelled) return;
+        setCfg(c);
+        // the dev deep link signs in only once the backend confirms development sign-in
+        if (autoEmail && c.dev_login) {
+          setAutoBusy(true);
+          login(autoEmail, null).catch((err: unknown) => {
+            if (!cancelled) {
+              setCfgError(errorText(err));
+              setAutoBusy(false);
+            }
+          });
+        }
+      },
+      (err: unknown) => {
+        if (!cancelled) setCfgError(errorText(err));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [api, autoEmail, login]);
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    void submit(email);
-  };
+  const signIn = useCallback((email: string, pw: string | null) => login(email, pw), [login]);
 
   return (
-    <div className="login">
-      <form className="login-card" onSubmit={onSubmit} aria-labelledby="login-title">
-        <div className="brand brand-lg">
-          <span className="brand-mark" aria-hidden="true">
-            CR
-          </span>
-          <span className="brand-name">CampusRide</span>
-        </div>
-        <h1 id="login-title">Sign in</h1>
-        <p className="muted">
-          Prototype sign-in with a seeded demo account. No password — the backend runs in mock-auth
-          mode.
-        </p>
-        <label className="field">
-          <span>Student email</span>
-          <input
-            className="input"
-            type="email"
-            required
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
-          {busy ? "Signing in…" : "Continue"}
-        </button>
-        <p className="footnote">
+    <RoleSignIn
+      role="student"
+      otherRoleHref={config.adminAppUrl}
+      options={cfg}
+      optionsError={cfgError}
+      defaultEmail={autoEmail ?? DEFAULT_EMAIL}
+      onSignIn={signIn}
+      errorText={errorText}
+      busy={autoBusy}
+      demoHint={
+        <>
           Demo accounts: <code>student001</code> … <code>student300@campusride.demo</code>
-        </p>
-      </form>
-    </div>
+        </>
+      }
+    />
   );
 }

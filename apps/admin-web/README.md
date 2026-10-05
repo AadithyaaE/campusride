@@ -10,8 +10,12 @@ npm install
 npm run dev          # http://localhost:5174 (backend CORS already allows it)
 ```
 
-Sign in with a mock admin account, e.g. `admin1@campusride.demo` (no password; non-admin
+Sign in as an admin, e.g. `admin1@campusride.demo` — development sign-in (no password) when the backend runs `AUTH_MODE=dev`, email + password with `AUTH_MODE=password` (Feature 15, `docs/authentication.md`; non-admin
 accounts are refused). Backend URL: `VITE_API_BASE_URL` (default `http://localhost:8000/api/v1`).
+
+The sign-in page is the shared CampusRide page (`src/signin/`, identical to the Student app's):
+"Who are you? → Student" links to the Student app's sign-in (`VITE_STUDENT_APP_URL`, default
+`http://localhost:5173/`). Choosing a role never grants it — the backend's role decides.
 
 ## Transport control room (Feature 13)
 
@@ -87,7 +91,7 @@ npm run gen:api      # regenerate src/api/schema.gen.ts from a running backend
 
 ## Known limitations
 
-- Mock authentication only (as the rest of the prototype).
+- External-provider (OIDC) sign-in is verified by the backend but has no sign-in UI here yet.
 - The small API client (`src/api/client.ts`) mirrors the student app's client; moving both
   into `packages/api-client` is planned.
 - Polling, not WebSockets.

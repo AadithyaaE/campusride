@@ -1,0 +1,313 @@
+/* CampusRide sign-in, shared by the Student and Admin web apps (kept IDENTICAL in both). */
+.cr-signin {
+  --cr-brand: #0f3d5e;
+  --cr-brand-2: #164e78;
+  --cr-accent: #0284c7;
+  --cr-ink: #0f172a;
+  --cr-muted: #52627a;
+  --cr-line: #d4dde8;
+  --cr-surface: #ffffff;
+  --cr-bg: #eef3f8;
+  --cr-focus: 0 0 0 3px rgba(2, 132, 199, 0.35);
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--cr-bg);
+  color: var(--cr-ink);
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}
+.cr-signin-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.cr-signin-main {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px 16px;
+  box-sizing: border-box;
+}
+.cr-signin-card {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+  padding: 32px 32px 22px;
+  border-radius: 20px;
+  background: var(--cr-surface);
+  border: 1px solid rgba(15, 61, 94, 0.08);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 18px 48px -12px rgba(15, 61, 94, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: cr-signin-in 240ms ease-out both;
+}
+@keyframes cr-signin-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cr-signin-card {
+    animation: none;
+  }
+}
+
+.cr-signin-head {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.cr-signin-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--cr-brand);
+  color: #fff;
+  margin-bottom: 10px;
+  box-shadow: 0 6px 16px -6px rgba(15, 61, 94, 0.6);
+}
+.cr-signin-name {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cr-brand);
+}
+.cr-signin-sub {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cr-ink);
+}
+.cr-signin-tag {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--cr-muted);
+  letter-spacing: 0.02em;
+}
+
+.cr-signin-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.cr-signin-who {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cr-muted);
+  text-align: center;
+}
+.cr-signin-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #eef2f7;
+  border: 1px solid var(--cr-line);
+}
+.cr-signin-opt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 9px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cr-muted);
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+a.cr-signin-opt:hover {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--cr-brand);
+}
+a.cr-signin-opt:focus-visible {
+  outline: none;
+  box-shadow: var(--cr-focus);
+}
+.cr-signin-opt.is-active {
+  background: var(--cr-surface);
+  color: var(--cr-brand);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    inset 0 0 0 1.5px var(--cr-brand);
+}
+.cr-signin-blurb {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--cr-muted);
+}
+
+.cr-signin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cr-ink);
+}
+.cr-signin-field input {
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--cr-line);
+  background: #fbfcfe;
+  color: var(--cr-ink);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+.cr-signin-field input:hover {
+  border-color: #b5c3d3;
+}
+.cr-signin-field input:focus {
+  outline: none;
+  border-color: var(--cr-accent);
+  box-shadow: var(--cr-focus);
+  background: #fff;
+}
+
+.cr-signin-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--cr-brand);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.cr-signin-submit:hover:not(:disabled) {
+  background: var(--cr-brand-2);
+}
+.cr-signin-submit:focus-visible {
+  outline: none;
+  box-shadow: var(--cr-focus);
+}
+.cr-signin-submit:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.cr-signin-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  animation: cr-spin 700ms linear infinite;
+  flex: none;
+}
+.cr-signin-spinner.is-dark {
+  border-color: rgba(15, 61, 94, 0.2);
+  border-top-color: var(--cr-brand);
+}
+@keyframes cr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cr-signin-wait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--cr-muted);
+}
+.cr-signin-msg {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.cr-signin-msg.is-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+.cr-signin-msg.is-demo {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #78350f;
+}
+.cr-signin-msg.is-info {
+  background: #f0f7ff;
+  border: 1px solid #cfe3f7;
+  color: #1e3a5f;
+}
+.cr-signin-hint {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--cr-muted);
+}
+.cr-signin-hint code {
+  font-size: 12px;
+}
+.cr-signin-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #edf1f6;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cr-muted);
+}
+
+@media (max-width: 480px) {
+  .cr-signin-main {
+    align-items: start;
+    padding-top: 24px;
+  }
+  .cr-signin-card {
+    padding: 24px 20px 18px;
+  }
+  .cr-signin-name {
+    font-size: 24px;
+  }
+}

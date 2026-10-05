@@ -39,9 +39,12 @@ beforeEach(() => {
 });
 
 describe("App", () => {
-  it("signs in with mock auth and loads the network from the backend", async () => {
+  it("signs in (development sign-in, clearly labelled) and loads the network from the backend", async () => {
     const { backend } = setup();
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("note")).toHaveTextContent(
+      "Demo sign-in — use any demo student account",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByTestId("map")).toHaveTextContent("2 routes, 4 stops");
     expect(screen.getByText("Test Student")).toBeInTheDocument();
@@ -54,7 +57,7 @@ describe("App", () => {
     expect(mapProps.current?.stops.find((s) => s.id === "X2")?.shared).toBe(true);
     expect(backend.calls).toEqual(
       expect.arrayContaining([
-        "POST /api/v1/auth/mock-login",
+        "POST /api/v1/auth/dev-login",
         "GET /api/v1/stops",
         "GET /api/v1/routes",
         "GET /api/v1/routes/T1",
@@ -63,29 +66,81 @@ describe("App", () => {
         "GET /api/v1/buses",
       ]),
     );
-    expect(await screen.findByText("Backend connected")).toBeInTheDocument();
+    expect(await screen.findByRole("status", { name: "Connection" })).toBeInTheDocument();
     expect(screen.getAllByText(/Simulated/i).length).toBeGreaterThan(0);
+  });
+
+  it("is the shared CampusRide sign-in: Student selected, Admin links to the admin sign-in", async () => {
+    setup();
+    const form = await screen.findByRole("form", { name: "Student sign in" });
+    expect(within(form).getByRole("heading", { level: 1 })).toHaveTextContent("CampusRide");
+    const who = within(form).getByRole("group", { name: "Who are you?" });
+    expect(within(who).getByText("Student").closest("[aria-current]")).not.toBeNull();
+    // choosing Admin only navigates to the Admin app's sign-in: no credentials or token travel
+    expect(within(who).getByRole("link", { name: "Admin" })).toHaveAttribute(
+      "href",
+      "http://localhost:5174/",
+    );
+    expect(within(form).getByLabelText("Student email")).toBeInTheDocument();
+  });
+
+  it("refuses an admin account on the Student sign-in and stores nothing", async () => {
+    const { store } = setup({
+      "POST /api/v1/auth/dev-login": () => json({ ...fx.token, user: { ...fx.me, role: "admin" } }),
+    });
+    await screen.findByRole("note");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("This isn't a student account.");
+    expect(store.get()).toBeNull();
+    expect(screen.getByRole("form", { name: "Student sign in" })).toBeInTheDocument();
   });
 
   it("shows the backend's login error", async () => {
     setup({
-      "POST /api/v1/auth/mock-login": () =>
+      "POST /api/v1/auth/dev-login": () =>
         json(
           { error: { code: "unauthorized", message: "no seeded user with email 'x@y.z'" } },
           401,
         ),
     });
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("note");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("no seeded user");
   });
 
   it("refuses non-student accounts", async () => {
     setup({
-      "POST /api/v1/auth/mock-login": () =>
-        json({ ...fx.token, user: { ...fx.me, role: "admin" } }),
+      "POST /api/v1/auth/dev-login": () => json({ ...fx.token, user: { ...fx.me, role: "admin" } }),
     });
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("note");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("student account");
+  });
+
+  it("password mode: signs in with email + password (no development label, nothing stored but the token)", async () => {
+    const storage = new MemoryStorage();
+    const store = new SessionStore(storage);
+    const backend = fakeBackend({ "GET /api/v1/auth/config": () => json(fx.passwordAuth) });
+    const api = new ApiClient({
+      baseUrl: "http://backend.test/api/v1",
+      getToken: () => store.get()?.token ?? null,
+      onUnauthorized: () => store.clear(),
+      fetchImpl: backend.fetchImpl,
+    });
+    render(<App api={api} store={store} />);
+    const password = await screen.findByLabelText("Password");
+    expect(screen.queryByText(/Demo sign-in/)).not.toBeInTheDocument();
+    await userEvent.type(password, "wrong-password");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("invalid email or password");
+    await userEvent.type(screen.getByLabelText("Password"), "right-password");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText("Test Student")).toBeInTheDocument();
+    expect(backend.calls).toContain("POST /api/v1/auth/login");
+    expect(backend.calls).not.toContain("POST /api/v1/auth/dev-login");
+    expect(
+      JSON.stringify([...Array(storage.length)].map((_, i) => storage.getItem(storage.key(i)!))),
+    ).not.toContain("right-password");
   });
 
   it("restores the session, view and My Bus from the backend after a refresh", async () => {
@@ -143,7 +198,7 @@ describe("App", () => {
       },
       storage,
     );
-    expect(await screen.findByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Sign in" })).toBeInTheDocument();
     expect(storage.getItem("campusride.session")).toBeNull();
   });
 
@@ -163,7 +218,7 @@ describe("App", () => {
       storage,
     );
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Backend unreachable");
+    expect(alert).toHaveTextContent("Can't reach CampusRide");
     expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 
