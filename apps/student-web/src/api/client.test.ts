@@ -34,7 +34,7 @@ describe("ApiClient", () => {
   it("does not send a token to public endpoints", async () => {
     const fetchImpl = vi.fn(async () => json(fx.token));
     const api = makeClient(fetchImpl as unknown as typeof fetch, "tok");
-    await api.mockLogin("t1@example.test");
+    await api.devLogin("t1@example.test");
     const init = (fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1];
     expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
     expect(init.method).toBe("POST");

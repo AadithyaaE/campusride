@@ -8,6 +8,9 @@
  *   "Will I make my bus?" (`GET /students/me/commute-decision`) and missed-bus
  *   recovery (`GET /students/me/recovery-options`, suggestions only).
  * Alerts (`GET /alerts`, Feature 11) come from the backend AlertService.
+ * Feature 16: TODAY'S COMMUTE (`GET /students/me/commute`, the backend's phase + decision +
+ *   boarding in one answer) leads the page; RECENT COMMUTES (`GET /students/me/history`)
+ *   follows the alerts.
  *   labelled as estimates until Phases 4/6 provide them from the backend.
  */
 import type { ReactNode } from "react";
@@ -24,7 +27,10 @@ import { BusOptions } from "./BusOptions";
 import { DemoControls } from "./DemoControls";
 import { DecisionCard, MyBusLiveCard } from "./LiveCards";
 import { QuickActions } from "./QuickActions";
+import { RecentCommutes } from "./RecentCommutes";
 import { RecoveryCard } from "./RecoveryCard";
+import { hasEta } from "./interim";
+import { TodayCommute } from "./TodayCommute";
 
 type Loadable<T> = AsyncState<T> & { reload: () => void };
 
@@ -56,7 +62,7 @@ export function DashboardPanel(props: Props) {
   if (assignment.status === "loading") {
     return (
       <Body>
-        <Loading label="Loading your bus assignment…" />
+        <Loading label="Getting your bus assignment…" />
       </Body>
     );
   }
@@ -69,7 +75,10 @@ export function DashboardPanel(props: Props) {
   }
 
   const a = assignment.data.assignment;
-  const demo = <DemoControls sim={fleet.sim} control={fleet.control} realtime={fleet.realtime} />;
+  // Simulator controls are an operator tool, not part of the student product: only with ?demo.
+  const demo = showDemoControls() ? (
+    <DemoControls sim={fleet.sim} control={fleet.control} realtime={fleet.realtime} />
+  ) : null;
 
   if (a === null) {
     return (
@@ -97,10 +106,36 @@ export function DashboardPanel(props: Props) {
     <Body title={`Hi, ${props.firstName}`}>
       {fleet.error && !fleet.buses && <ErrorState error={fleet.error} onRetry={fleet.refresh} />}
       {!fleet.buses && !fleet.error ? (
-        <Loading label="Loading live bus data…" />
+        <Loading label="Getting your latest commute…" />
       ) : (
         <>
-          {fleet.recovery && (
+          {fleet.today && fleet.today.status === "assigned" && (
+            <TodayCommute
+              today={fleet.today}
+              heroEta={
+                arrivals?.my_bus_serving_stop && arrivals.my_bus && hasEta(arrivals.my_bus)
+                  ? arrivals.my_bus.eta
+                  : (fleet.today.decision.eta ?? null)
+              }
+              simRef={simRef}
+              actions={{
+                onShowBus: () => {
+                  props.onSelectBus(a.bus.id);
+                  document.querySelector(".map-wrap")?.scrollIntoView?.({ behavior: "smooth" });
+                },
+                onViewRecovery: () =>
+                  document
+                    .getElementById("recovery")
+                    ?.scrollIntoView?.({ behavior: "smooth", block: "start" }),
+                onViewOptions: () =>
+                  document
+                    .getElementById("bus-options")
+                    ?.scrollIntoView?.({ behavior: "smooth", block: "start" }),
+              }}
+            />
+          )}
+          {/* The backend's own boarding record wins: no "you missed it" card once boarded. */}
+          {fleet.recovery && !fleet.today?.boarding.boarded && (
             <RecoveryCard
               recovery={fleet.recovery}
               simRef={simRef}
@@ -150,6 +185,14 @@ export function DashboardPanel(props: Props) {
             nowIso={fleet.sim?.sim_time ?? null}
             onMarkRead={(id) => void fleet.markAlertRead(id)}
           />
+          <RecentCommutes
+            refreshKey={[
+              fleet.today?.phase,
+              fleet.today?.trip?.trip_id,
+              fleet.today?.trip?.status,
+              fleet.today?.boarding.boarded?.boarding_id,
+            ].join("|")}
+          />
           <BusList
             view={props.busView}
             onViewChange={props.onBusViewChange}
@@ -165,6 +208,14 @@ export function DashboardPanel(props: Props) {
       {demo}
     </Body>
   );
+}
+
+function showDemoControls(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).has("demo");
+  } catch {
+    return false;
+  }
 }
 
 function Body({ title, children }: { title?: string; children: ReactNode }) {

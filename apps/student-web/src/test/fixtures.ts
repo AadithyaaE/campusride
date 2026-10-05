@@ -4,6 +4,8 @@
  * seed data — names and ids are invented so tests never pin the real network.
  */
 import type {
+  AuthConfig,
+  CommuteHistoryOut,
   ArrivalOut,
   BusOptionOut,
   BusOptionsOut,
@@ -36,13 +38,32 @@ export const me: MeOut = {
   role: "student",
   name: "Test Student",
   email: "t1@example.test",
+  active: true,
 };
 
 export const token: TokenOut = {
   access_token: "mock.test.token",
   token_type: "bearer",
   expires_at: "2099-01-01T00:00:00Z",
+  auth_method: "dev",
   user: me,
+};
+
+export const devAuth: AuthConfig = {
+  mode: "dev",
+  development: true,
+  dev_login: true,
+  password_login: false,
+  external_provider: false,
+  oidc_issuer: null,
+};
+
+export const passwordAuth: AuthConfig = {
+  ...devAuth,
+  mode: "password",
+  development: false,
+  dev_login: false,
+  password_login: true,
 };
 
 export const health: HealthOut = {
@@ -803,3 +824,54 @@ export const myAlerts: Alert[] = [
     },
   ),
 ];
+
+// ---- Feature 16 — student commute experience
+
+export const myHistory: CommuteHistoryOut = {
+  student_id: me.id,
+  generated_at: "2030-01-07T02:30:00Z",
+  entries: [
+    {
+      trip_id: "T-TEST-T2-0715",
+      service_date: "2030-01-07",
+      bus_id: "BX7",
+      route_id: "T2",
+      route_name: "Test Route Two",
+      route_direction_id: "T2",
+      direction: "to_campus",
+      direction_label: "T2 — To Campus",
+      boarding_stop: { id: "X2", name: "Test Stop B" },
+      scheduled_departure: "2030-01-07T01:45:00Z",
+      actual_start: "2030-01-07T01:46:00Z",
+      actual_end: "2030-01-07T02:35:00Z",
+      trip_status: "completed",
+      end_reason: "terminal",
+      outcome: "boarded",
+      boarded: true,
+      boarding_time: "2030-01-07T02:01:00Z",
+      boarding_source: "qr",
+      scanner: "simulated",
+    },
+    {
+      trip_id: "T-TEST-T2-0715-PREV",
+      service_date: "2030-01-06",
+      bus_id: "BX7",
+      route_id: "T2",
+      route_name: "Test Route Two",
+      route_direction_id: "T2",
+      direction: "to_campus",
+      direction_label: "T2 — To Campus",
+      boarding_stop: { id: "X2", name: "Test Stop B" },
+      scheduled_departure: "2030-01-06T01:45:00Z",
+      actual_start: "2030-01-06T01:46:00Z",
+      actual_end: "2030-01-06T02:10:00Z",
+      trip_status: "completed",
+      end_reason: "driver_stop",
+      outcome: "ended_early",
+      boarded: false,
+      boarding_time: null,
+      boarding_source: null,
+      scanner: null,
+    },
+  ],
+};

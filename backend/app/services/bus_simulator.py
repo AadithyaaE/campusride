@@ -218,8 +218,12 @@ class BusSimulator:
         for bus_id in sim_ids:
             await repos.bus_states.delete(bus_id)
         await repos.telemetry.delete_for_buses(sim_ids)
-        await repos.boarding_events.delete_for_buses(sim_ids)  # trips replay from the start
-        await repos.alerts.delete_for_buses(sim_ids)  # …so do their alerts (Feature 11)
+        # The service date replays from the start: its boardings and alerts go with it. Other
+        # dates are kept (Feature 16 commute history); their still-active alerts are closed.
+        day = [t.id for t in trips if t.bus_id in set(sim_ids)]
+        await repos.boarding_events.delete_for_trips(day)
+        await repos.alerts.delete_for_trips(sim_ids, day)
+        await repos.alerts.resolve_active_for_buses(sim_ids, self._clock.now())
         self._ingest.alerts.forget_caches()
         self._ingest.forget_caches()
 
@@ -259,9 +263,14 @@ class BusSimulator:
             return trips
         fresh: list[Trip] = []
         for t in trips:
-            if t.status is not TripStatus.SCHEDULED or t.actual_start or t.actual_end:
+            if t.status is not TripStatus.SCHEDULED or t.actual_start or t.actual_end or t.end_reason:
                 t = t.model_copy(
-                    update={"status": TripStatus.SCHEDULED, "actual_start": None, "actual_end": None}
+                    update={
+                        "status": TripStatus.SCHEDULED,
+                        "actual_start": None,
+                        "actual_end": None,
+                        "end_reason": None,
+                    }
                 )
                 await self._repos.trips.upsert(t)
             fresh.append(t)

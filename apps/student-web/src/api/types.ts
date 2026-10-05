@@ -10,6 +10,7 @@ type Schemas = components["schemas"];
 export type HealthOut = Schemas["HealthOut"];
 export type ClockOut = Schemas["ClockOut"];
 export type TokenOut = Schemas["TokenOut"];
+export type AuthConfig = Schemas["AuthConfigOut"];
 export type MeOut = Schemas["MeOut"];
 export type Role = Schemas["Role"];
 export type Direction = Schemas["Direction"];
@@ -62,6 +63,11 @@ export type RouteStatusResponse = Schemas["RouteStatusOut"];
 export type RouteDeviationDemoMode = Schemas["RouteDeviationIn"]["mode"];
 // ---- in-app alerts (Feature 11) — created by the backend, displayed as given
 export type Alert = Schemas["AlertOut"];
+// Feature 16 — student commute experience
+export type StudentCommuteOut = Schemas["StudentCommuteOut"];
+export type CommutePhase = StudentCommuteOut["phase"];
+export type CommuteHistoryOut = Schemas["CommuteHistoryOut"];
+export type CommuteHistoryEntry = Schemas["CommuteHistoryEntryOut"];
 export type AlertType = Schemas["AlertType"];
 export type AlertSeverity = Schemas["Severity"];
 export type AlertsResponse = Alert[];

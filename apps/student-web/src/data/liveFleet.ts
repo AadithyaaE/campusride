@@ -4,14 +4,16 @@
  *
  * Feature 14 — real time:
  * 1. REST loads everything once: `GET /buses`, `/students/me/arrivals` (matching + ETA),
- *    `/students/me/bus-options`, `/students/me/commute-decision`,
- *    `/students/me/recovery-options`, `/alerts` (own notifications) and `/sim/status`.
+ *    `/students/me/bus-options`, `/students/me/commute` (Feature 16: decision, recovery,
+ *    boarding, own active alerts and the backend's commute phase in ONE call), `/alerts`
+ *    (own notifications) and `/sim/status`.
  * 2. The WebSocket (`/api/v1/ws`) then pushes changes:
  *    - `bus.state.updated` → the bus's `GET /buses` item, applied in place;
  *    - `alert.*`           → the student's OWN alerts (the backend never sends others');
  *    - `eta.updated`, `occupancy.updated`, `route.deviation`, `trip.*` for a bus relevant
- *      to this student → the student-specific backend answers (arrivals, comparison,
- *      decision, recovery) are re-fetched, at most once per 1.5 s;
+ *      to this student, and the student's own `boarding.updated` → the student-specific
+ *      backend answers (arrivals, comparison, today's commute) are re-fetched, at most once
+ *      per 1.5 s;
  *    - `sim.reset` → everything is re-fetched.
  * 3. After every (re)connection REST is fetched once (no missed events). While the socket
  *    is down, REST is polled every 10 s; while it is live, only every 60 s as a safety net.
@@ -29,6 +31,7 @@ import type {
   MyArrivalsOut,
   RecoveryOut,
   SimStatusOut,
+  StudentCommuteOut,
 } from "../api/types";
 import { RealtimeClient, type RealtimeStatus, type WsEnvelope } from "../realtime/client";
 
@@ -47,9 +50,11 @@ export interface LiveFleet {
   arrivals: MyArrivalsOut | null;
   /** Backend comparison of the buses serving the boarding stop (indicators, crowding). */
   options: BusOptionsOut | null;
-  /** Backend "Will I make my bus?" decision for the ASSIGNED bus. */
+  /** Feature 16: today's commute (phase, trip, boarding…) — the backend's single answer. */
+  today: StudentCommuteOut | null;
+  /** Backend "Will I make my bus?" decision for the ASSIGNED bus (from `today`). */
   commute: CommuteDecisionOut | null;
-  /** Backend missed-bus recovery (suggestions only). */
+  /** Backend missed-bus recovery (suggestions only, from `today`). */
   recovery: RecoveryOut | null;
   /** The student's own backend alerts, newest first (Feature 11). */
   alerts: Alert[] | null;
@@ -82,8 +87,7 @@ export function useLiveFleet(): LiveFleet {
   const [buses, setBuses] = useState<BusOut[] | null>(null);
   const [arrivals, setArrivals] = useState<MyArrivalsOut | null>(null);
   const [options, setOptions] = useState<BusOptionsOut | null>(null);
-  const [commute, setCommute] = useState<CommuteDecisionOut | null>(null);
-  const [recovery, setRecovery] = useState<RecoveryOut | null>(null);
+  const [today, setToday] = useState<StudentCommuteOut | null>(null);
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
   const [sim, setSim] = useState<SimStatusOut | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -92,20 +96,18 @@ export function useLiveFleet(): LiveFleet {
 
   const refresh = useCallback(async () => {
     try {
-      const [b, a, o, d, r, n, s] = await Promise.all([
+      const [b, a, o, t, n, s] = await Promise.all([
         api.listBuses(),
         api.myArrivals(),
         api.myBusOptions(),
-        api.myCommuteDecision(),
-        api.myRecoveryOptions(),
+        api.myCommute(),
         api.alerts({ limit: 20 }),
         api.simStatus(),
       ]);
       setBuses(b);
       setArrivals(a);
       setOptions(o);
-      setCommute(d);
-      setRecovery(r);
+      setToday(t);
       setAlerts(n);
       setSim(s);
       setError(null);
@@ -118,16 +120,10 @@ export function useLiveFleet(): LiveFleet {
   /** Only the student-specific backend answers (they depend on the buses that moved). */
   const refreshDerived = useCallback(async () => {
     try {
-      const [a, o, d, r] = await Promise.all([
-        api.myArrivals(),
-        api.myBusOptions(),
-        api.myCommuteDecision(),
-        api.myRecoveryOptions(),
-      ]);
+      const [a, o, t] = await Promise.all([api.myArrivals(), api.myBusOptions(), api.myCommute()]);
       setArrivals(a);
       setOptions(o);
-      setCommute(d);
-      setRecovery(r);
+      setToday(t);
       setFetchedAt(new Date());
     } catch (e) {
       setError(e instanceof Error ? e : new Error(String(e)));
@@ -190,6 +186,9 @@ export function useLiveFleet(): LiveFleet {
         case "trip.completed":
           scheduleDerived(); // a bus may have started (or stopped) serving the stop
           return;
+        case "boarding.updated":
+          scheduleDerived(); // the backend only sends the student their OWN boarding
+          return;
         case "sim.reset":
           void refresh();
           return;
@@ -214,6 +213,7 @@ export function useLiveFleet(): LiveFleet {
       onEvent: (e) => latest.current.onEvent(e),
       onOpen: () => void latest.current.refresh(),
       onStatus: setRealtime,
+      onUnauthorized: () => api.unauthorized(), // refused session → sign out (same as REST 401)
     });
     client.start();
     return () => {
@@ -247,8 +247,9 @@ export function useLiveFleet(): LiveFleet {
     buses,
     arrivals,
     options,
-    commute,
-    recovery,
+    today,
+    commute: today?.decision ?? null,
+    recovery: today?.recovery ?? null,
     alerts,
     markAlertRead: async (alertId: string) => {
       setAlerts(

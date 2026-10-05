@@ -5,8 +5,9 @@ from __future__ import annotations
 import math
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
+from app.api.v1.buses import bus_out
 from app.core.auth import Principal
 from app.core.errors import ForbiddenError, NotFoundError
 from app.deps import Container, CurrentPrincipal, Repos, require_role
@@ -17,9 +18,17 @@ from app.models.api.comparison import BusOptionOut, BusOptionsOut, ExcludedBusOu
 from app.models.api.eta import ArrivalOut, EtaPredictionOut, MyArrivalsOut
 from app.models.api.matching import MyStopBusesOut, StopBusOut, StopSummaryOut
 from app.models.api.recovery import ExcludedRecoveryBusOut, RecoveryOptionOut, RecoveryOut
+from app.models.api.route_status import AlertOut
+from app.models.api.student_commute import (
+    CommuteHistoryEntryOut,
+    CommuteHistoryOut,
+    CommuteTripOut,
+    StudentCommuteOut,
+)
 from app.models.api.students import AssignmentOut, MyAssignmentOut
 from app.models.common import Role
 from app.services.assignments import AssignmentService
+from app.services.boarding_service import StudentBoarding
 from app.services.bus_comparison_service import BusOption, StudentBusOptions
 from app.services.commute_decision_service import StudentCommute
 from app.services.missed_bus_service import StudentRecovery
@@ -313,16 +322,10 @@ async def student_commute_decision(
 # --------------------------------------------------------------------------- Feature 8
 
 
-@router.get("/students/me/boarding", response_model=MyBoardingOut)
-async def my_boarding(principal: Student, c: Container) -> MyBoardingOut:
-    """Scanner screen state: assigned bus + its current trip, readiness, boarding, occupancy.
-
-    Read-only and assignment-derived — the student cannot pick a bus, trip or stop.
-    """
-    sb = await c.boarding().for_student(principal.user_id)
+def _boarding_out(student_id: str, sb: StudentBoarding | None) -> MyBoardingOut:
     if sb is None:
         return MyBoardingOut(
-            student_id=principal.user_id,
+            student_id=student_id,
             status="unassigned",
             bus_id=None,
             bus_number=None,
@@ -337,7 +340,7 @@ async def my_boarding(principal: Student, c: Container) -> MyBoardingOut:
         )
     a = sb.assignment
     return MyBoardingOut(
-        student_id=principal.user_id,
+        student_id=student_id,
         status="assigned",
         bus_id=a.bus.id,
         bus_number=a.bus.id,
@@ -350,6 +353,15 @@ async def my_boarding(principal: Student, c: Container) -> MyBoardingOut:
         boarded=BoardingEventOut.of(sb.boarded) if sb.boarded else None,
         occupancy=OccupancyOut.of(sb.occupancy),
     )
+
+
+@router.get("/students/me/boarding", response_model=MyBoardingOut)
+async def my_boarding(principal: Student, c: Container) -> MyBoardingOut:
+    """Scanner screen state: assigned bus + its current trip, readiness, boarding, occupancy.
+
+    Read-only and assignment-derived — the student cannot pick a bus, trip or stop.
+    """
+    return _boarding_out(principal.user_id, await c.boarding().for_student(principal.user_id))
 
 
 # --------------------------------------------------------------------------- Feature 9
@@ -411,3 +423,90 @@ async def student_recovery_options(student_id: str, principal: CurrentPrincipal,
     """Same recovery options for a given student: the student themself, or an admin."""
     await _authorize_student_view(principal, c, student_id)
     return _recovery_out(c, student_id, await c.recovery().for_student(student_id))
+
+
+# --------------------------------------------------------------------------- Feature 16
+
+
+@router.get("/students/me/commute", response_model=StudentCommuteOut)
+async def my_commute(principal: Student, c: Container) -> StudentCommuteOut:
+    """Today's commute in ONE response: assignment, bus, trip, decision (with the ETA),
+    recovery, boarding, own active alerts and the backend's commute phase.
+
+    Scoped to the authenticated student; nothing here is computed by the client.
+    """
+    v = await c.student_commute().today(principal)
+    sr = v.recovery
+    t = v.trip
+    return StudentCommuteOut(
+        student_id=v.student_id,
+        status="assigned" if sr is not None else "unassigned",
+        phase=v.phase,
+        phase_reason=v.phase_reason,
+        assignment=AssignmentOut.of(sr.commute.assignment) if sr is not None else None,
+        bus=bus_out(v.bus, v.state, c) if v.bus is not None else None,
+        trip=(
+            CommuteTripOut(
+                trip_id=t.id,
+                status=t.status,
+                route_direction_id=t.variant_id,
+                direction=t.direction,
+                scheduled_start=t.scheduled_start,
+                actual_start=t.actual_start,
+                actual_end=t.actual_end,
+                end_reason=t.end_reason,
+            )
+            if t is not None
+            else None
+        ),
+        decision=_commute_out(c, v.student_id, sr.commute if sr is not None else None),
+        recovery=_recovery_out(c, v.student_id, sr),
+        boarding=_boarding_out(v.student_id, v.boarding),
+        alerts=[AlertOut.of(a) for a in v.alerts],
+        computed_at=v.computed_at,
+    )
+
+
+@router.get("/students/me/history", response_model=CommuteHistoryOut)
+async def my_history(
+    principal: Student, c: Container, limit: int = Query(20, ge=1, le=100)
+) -> CommuteHistoryOut:
+    """The signed-in student's recent commutes, newest first, derived from stored trips,
+    boarding events and missed-bus alerts. Trips that never started are not history."""
+    entries = await c.student_commute().history(principal.user_id, limit=limit)
+
+    def out(e) -> CommuteHistoryEntryOut:
+        t, b, r = e.trip, e.boarded, e.route
+        label = None
+        if r is not None:
+            try:
+                label = r.variant(t.variant_id).label
+            except KeyError:
+                label = None
+        return CommuteHistoryEntryOut(
+            trip_id=t.id,
+            service_date=t.service_date,
+            bus_id=t.bus_id,
+            route_id=t.route_id,
+            route_name=r.name if r is not None else None,
+            route_direction_id=t.variant_id,
+            direction=t.direction,
+            direction_label=label,
+            boarding_stop=(
+                StopSummaryOut(id=e.boarding_stop.id, name=e.boarding_stop.name) if e.boarding_stop else None
+            ),
+            scheduled_departure=t.scheduled_start,
+            actual_start=t.actual_start,
+            actual_end=t.actual_end,
+            trip_status=t.status,
+            end_reason=t.end_reason,
+            outcome=e.outcome,
+            boarded=b is not None,
+            boarding_time=b.ts if b is not None else None,
+            boarding_source=b.source if b is not None else None,
+            scanner=b.scanner if b is not None else None,
+        )
+
+    return CommuteHistoryOut(
+        student_id=principal.user_id, entries=[out(e) for e in entries], generated_at=c.clock.now()
+    )

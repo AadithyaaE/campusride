@@ -5,7 +5,7 @@ Intelligent college bus commute assistant — Smart India Hackathon 2026 prototy
 Students see where their college bus is, whether they can catch it, which other
 buses serve their stop, and what to do if they miss it. The prototype runs
 entirely on **deterministic synthetic data**: a fictional campus on the real
-Chennai road network, simulated buses, simulated GPS, mock auth. No paid APIs,
+Chennai road network, simulated buses, simulated GPS, development sign-in by default (real password / OIDC authentication configurable). No paid APIs,
 no Firebase project, no GPS hardware.
 
 Architecture and decisions: [docs/architecture.md](docs/architecture.md).
@@ -29,6 +29,8 @@ Architecture and decisions: [docs/architecture.md](docs/architecture.md).
 | F12 | Driver App (React Native + Expo, `apps/driver-app`) — driver signs in (mock auth), sees the backend assignment, START / STOP TRIP drive the EXISTING simulator for driver-controlled buses (`SIM_DRIVER_CONTROLLED_BUSES`, default B07): same synthetic telemetry → tracking → BusState the Student and Admin dashboards read; speed, GPS freshness, passengers, next stop, route and occupancy all from the backend. Feature 12 uses synthetic GPS; actual device GPS is not implemented yet | ✅ done |
 | F13 | Transport admin dashboard — `admin-web` becomes one control room: KPI cards, live fleet map (Leaflet/OSM), fleet table with route/bus/status filters, active buses, occupancy, route deviations, delays, alerts, read-only route & schedule management, usage analytics (live aggregates + clearly labelled deterministic synthetic history); `GET /admin/overview`, `/admin/fleet`, `/admin/routes`, `/admin/schedule`, `/admin/analytics` (admins only) | ✅ done |
 | F14 | Real-time WebSocket updates — `/api/v1/ws` (first-message token auth, role/user/bus audiences, heartbeat) fed by the EXISTING event bus: bus state, fleet rows, driver dashboard, trips, occupancy, ETA, route deviation, boarding, alerts, admin KPIs; coalesced ≤ 1 push/s per bus; all three apps load REST first, re-sync after every reconnect and fall back to 10 s polling. See `docs/realtime.md` | ✅ done |
+| F15 | Real authentication & identity — one provider-agnostic boundary (`app/core/auth.py`) for REST and WebSocket: `AUTH_MODE=dev` (explicit development sign-in), `password` (email + password, scrypt, signed session tokens) or `oidc` (external provider ID tokens, e.g. Firebase, verified via JWKS); identities have `active`, timestamps and provider links; role read from the database on every request; inactive → 401 / WebSocket 4401; `GET /auth/config`, `POST /auth/dev-login`, `POST /auth/login`. See `docs/authentication.md` | ✅ done |
+| F16 | Student commute experience & trip history — `GET /students/me/commute` (one backend answer: assignment, live bus, current trip, decision + ETA, recovery, boarding, own active alerts and a backend commute phase: waiting / approaching / at stop / on board / completed / missed / recovery available) and `GET /students/me/history` (recent commutes derived from stored trips, boardings and missed-bus alerts; boarded / missed / trip ended early / no boarding recorded). Trips record how they ended (`end_reason`); a simulator reset replays only its own day, so earlier days' history persists. Student dashboard: Today's Commute + Recent Commutes, realtime-driven | ✅ done |
 | 2 | Simulator, telemetry ingestion, WebSocket, live buses on the student map | next |
 | 3 | Stop selection, matching, baseline ETA, multi-bus arrivals | |
 | 4 | "Will I make my bus?", missed-bus recovery | |
@@ -42,7 +44,7 @@ Today (Phase 1):
 
 ```
 MongoDB (Docker, seeded)  →  FastAPI /api/v1  →  Student React app (Vite, Leaflet + OSM)
-                              REST + mock auth      fetches stops, routes, geometry, /me
+                              REST + auth (dev/password/oidc)  fetches stops, routes, geometry, /me
 ```
 
 Live bus positions (Feature 3) — synthetic, but through the real pipeline:
@@ -97,11 +99,11 @@ Optional: copy `.env.example` to `.env` (repo root) for backend settings. Defaul
 Try the API directly:
 
 ```bash
-curl -X POST localhost:8000/api/v1/auth/mock-login -H "Content-Type: application/json"      -d '{"email":"student001@campusride.demo"}'          # → access_token
+curl -X POST localhost:8000/api/v1/auth/dev-login -H "Content-Type: application/json"      -d '{"email":"student001@campusride.demo"}'          # → access_token
 curl -H "Authorization: Bearer <token>" localhost:8000/api/v1/stops/S08/routes
 ```
 
-Demo logins (mock auth): `student001`…`student300@campusride.demo`,
+Demo logins (development sign-in, `AUTH_MODE=dev`; for real email + password sign-in see `docs/authentication.md`): `student001`…`student300@campusride.demo`,
 `driver01`…`driver12@campusride.demo`, `admin1` / `admin2@campusride.demo`
 (the student app accepts student accounts only).
 Every 25th student (`student025`, `student050`, … `student300`) has **no bus

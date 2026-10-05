@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import AwareDatetime
 
@@ -23,3 +24,6 @@ class Trip(Document):
     actual_start: AwareDatetime | None = None
     actual_end: AwareDatetime | None = None
     status: TripStatus = TripStatus.SCHEDULED
+    end_reason: Literal["terminal", "driver_stop"] | None = None
+    """Feature 16: how a COMPLETED trip ended — reached its last stop (tracking) or was
+    stopped by the driver (Feature 12 Stop Trip, possibly before every stop was served)."""

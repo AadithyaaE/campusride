@@ -8,6 +8,10 @@
  */
 import type {
   ArrivalOut,
+  AuthConfig,
+  CommuteHistoryEntry,
+  CommuteHistoryOut,
+  StudentCommuteOut,
   AssignmentOut,
   BusEtaOut,
   BusOptionOut,
@@ -78,6 +82,9 @@ export const isHealth: Guard<HealthOut> = (v): v is HealthOut =>
 
 export const isMe: Guard<MeOut> = (v): v is MeOut =>
   isObj(v) && isStr(v.id) && isStr(v.role) && isStr(v.name) && isStr(v.email);
+
+export const isAuthConfig: Guard<AuthConfig> = (v): v is AuthConfig =>
+  isObj(v) && isStr(v.mode) && isBool(v.development) && isBool(v.password_login);
 
 export const isToken: Guard<TokenOut> = (v): v is TokenOut =>
   isObj(v) && isStr(v.access_token) && isStr(v.expires_at) && isMe(v.user);
@@ -421,3 +428,41 @@ export const isAlert: Guard<Alert> = (v): v is Alert =>
   isBool(v.read) &&
   isBool(v.active) &&
   (v.recipient === "student" || v.recipient === "admin");
+
+// ---- Feature 16 — student commute experience
+
+const PHASES = [
+  "unassigned",
+  "no_trip",
+  "waiting",
+  "approaching",
+  "at_stop",
+  "on_board",
+  "completed",
+  "missed",
+  "recovery_available",
+];
+
+export const isStudentCommute: Guard<StudentCommuteOut> = (v): v is StudentCommuteOut =>
+  isObj(v) &&
+  isStr(v.student_id) &&
+  PHASES.includes(String(v.phase)) &&
+  isStr(v.phase_reason) &&
+  isCommuteDecision(v.decision) &&
+  isRecovery(v.recovery) &&
+  isMyBoarding(v.boarding) &&
+  Array.isArray(v.alerts) &&
+  v.alerts.every(isAlert) &&
+  (v.bus === null || isBus(v.bus));
+
+const isHistoryEntry = (v: unknown): v is CommuteHistoryEntry =>
+  isObj(v) &&
+  isStr(v.trip_id) &&
+  isStr(v.bus_id) &&
+  isStr(v.outcome) &&
+  isStr(v.trip_status) &&
+  isBool(v.boarded) &&
+  isStr(v.scheduled_departure);
+
+export const isCommuteHistory: Guard<CommuteHistoryOut> = (v): v is CommuteHistoryOut =>
+  isObj(v) && isStr(v.student_id) && Array.isArray(v.entries) && v.entries.every(isHistoryEntry);

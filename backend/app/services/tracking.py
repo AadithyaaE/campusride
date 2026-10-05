@@ -335,6 +335,7 @@ class TelemetryIngestService:
             raise NotFoundError(f"trip {trip_id} not found")
         if trip.status is not TripStatus.COMPLETED:
             trip = await self._repos.trips.set_status(trip.id, TripStatus.COMPLETED, at) or trip
+            trip = await self._repos.trips.upsert(trip.model_copy(update={"end_reason": "driver_stop"}))
             await self._events.publish(
                 TripEnded(ts=at, trip_id=trip.id, bus_id=trip.bus_id, variant_id=trip.variant_id)
             )
@@ -355,6 +356,7 @@ class TelemetryIngestService:
             )
         elif trip.status is TripStatus.ACTIVE and state.status is BusStatus.COMPLETED:
             trip = await self._repos.trips.set_status(trip.id, TripStatus.COMPLETED, at) or trip
+            trip = await self._repos.trips.upsert(trip.model_copy(update={"end_reason": "terminal"}))
             await self._events.publish(
                 TripEnded(ts=at, trip_id=trip.id, bus_id=trip.bus_id, variant_id=trip.variant_id)
             )
