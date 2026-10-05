@@ -10,58 +10,6 @@ no Firebase project, no GPS hardware.
 
 Architecture and decisions: [docs/architecture.md](docs/architecture.md). Cloud deployment (Render · MongoDB Atlas · Vercel · Expo EAS): [docs/deployment.md](docs/deployment.md).
 
-## Status
-
-| Phase | Scope | State |
-|---|---|---|
-| 1 | Backend skeleton, config, clock, MongoDB, seed data, geometry, tests | ✅ done |
-| 1b | Student web app (React + Leaflet) on the real Phase 1 API — routes, stops, college-assigned My Bus | ✅ done |
-| F2 | Student Dashboard — My Bus live card, "Will I make my bus?", alternatives, alerts, quick actions, live map | ✅ done |
-| F3 | Synthetic live bus tracking — backend simulator → telemetry → tracking → `GET /buses` (polled by the dashboard); dev/demo controls | ✅ done |
-| F4 | Stop + route matching — backend decides which buses serve a stop (by route direction), current/previous/next stop, far/approaching/at/passed; `GET /stops/{id}/buses`, `GET /students/me/stop/buses` | ✅ done |
-| F5 | Backend ETA prediction + multi-bus arrivals — deterministic ETA (distance, traffic profiles × time of day, timetable average, delay, dwell, stops left), confidence, traffic level; `GET /buses/{id}/eta?stop_id=`, `GET /stops/{id}/arrivals`, `GET /students/me/arrivals`; live countdown in the dashboard | ✅ done |
-| F6 | Multi-bus comparison — backend compares the buses serving the student's assigned stop (ETA, occupancy %, crowding, delay, confidence) with FASTEST / LEAST CROWDED / ASSIGNED / BEST ALTERNATIVE indicators; `GET /students/me/bus-options` (+ owner/admin `GET /students/{id}/bus-options`); Bus options card linked to the map | ✅ done |
-| F7 | "Will I make my bus?" — deterministic commute decision for the ASSIGNED bus (YES / RISK / MISSED; walk from a synthetic demo location, safety buffer, Feature 5 arrival time, Feature 4 passed/completed); `GET /students/me/commute-decision` (+ owner/admin `GET /students/{id}/commute-decision`) | ✅ done |
-| F8 | QR-based live capacity — simulated QR scanner (student app) → `POST /boarding/scan` (assignment + active-trip validation, one boarding per student per trip), occupancy = synthetic baseline + QR boardings, `GET /buses/{id}/occupancy`, `GET /trips/{id}/boarding`; first `admin-web` dashboard (live occupancy) | ✅ done |
-| F9 | Missed-bus recovery — when the assigned bus is at risk, missed or ≥ 5 min late, the backend offers other buses serving the SAME assigned stop/direction that the student can still catch (Feature 7 walking rules), ranked catchable → ETA → occupancy → on time → distance; `GET /students/me/recovery-options` (+ owner/admin by id); dashboard recovery card. Suggestions never change the assigned bus | ✅ done |
-| F10 | Route deviation detection — shortest distance from each bus's TRACKED position to its PLANNED route geometry → NORMAL (≤ 50 m) / MINOR_DEVIATION / MAJOR_DEVIATION (≥ 150 m); `GET /buses/{id}/route-status`; one alert per MAJOR episode (`GET /alerts`, admin); demo controls `POST /sim/route-deviation` (normal / minor / major); admin route map + student "Route" line. The route remains the planned route; demo deviation changes the synthetic bus position, not the route geometry | ✅ done |
-| F11 | Real-time in-app alerts — one backend `AlertService` (Feature 10's deviation alerts included): BUS_APPROACHING, BUS_DELAYED, CAPACITY_WARNING, ROUTE_DEVIATION, MISSED_BUS, ALTERNATIVE_BUS_AVAILABLE; transition-based and idempotent (one active alert per series, unique index); read/unread + resolution; `GET /alerts`, `PATCH /alerts/{id}/read`; student Notifications panel + admin Active alerts. Feature 11 uses HTTP polling for the prototype. The backend alert service is designed so the same alert events can later be delivered through WebSockets without moving alert-generation logic into the frontend | ✅ done |
-| F12 | Driver App (React Native + Expo, `apps/driver-app`) — driver signs in (mock auth), sees the backend assignment, START / STOP TRIP drive the EXISTING simulator for driver-controlled buses (`SIM_DRIVER_CONTROLLED_BUSES`, default B07): same synthetic telemetry → tracking → BusState the Student and Admin dashboards read; speed, GPS freshness, passengers, next stop, route and occupancy all from the backend. Feature 12 uses synthetic GPS; actual device GPS is not implemented yet | ✅ done |
-| F13 | Transport admin dashboard — `admin-web` becomes one control room: KPI cards, live fleet map (Leaflet/OSM), fleet table with route/bus/status filters, active buses, occupancy, route deviations, delays, alerts, read-only route & schedule management, usage analytics (live aggregates + clearly labelled deterministic synthetic history); `GET /admin/overview`, `/admin/fleet`, `/admin/routes`, `/admin/schedule`, `/admin/analytics` (admins only) | ✅ done |
-| F14 | Real-time WebSocket updates — `/api/v1/ws` (first-message token auth, role/user/bus audiences, heartbeat) fed by the EXISTING event bus: bus state, fleet rows, driver dashboard, trips, occupancy, ETA, route deviation, boarding, alerts, admin KPIs; coalesced ≤ 1 push/s per bus; all three apps load REST first, re-sync after every reconnect and fall back to 10 s polling. See `docs/realtime.md` | ✅ done |
-| F15 | Real authentication & identity — one provider-agnostic boundary (`app/core/auth.py`) for REST and WebSocket: `AUTH_MODE=dev` (explicit development sign-in), `password` (email + password, scrypt, signed session tokens) or `oidc` (external provider ID tokens, e.g. Firebase, verified via JWKS); identities have `active`, timestamps and provider links; role read from the database on every request; inactive → 401 / WebSocket 4401; `GET /auth/config`, `POST /auth/dev-login`, `POST /auth/login`. See `docs/authentication.md` | ✅ done |
-| F16 | Student commute experience & trip history — `GET /students/me/commute` (one backend answer: assignment, live bus, current trip, decision + ETA, recovery, boarding, own active alerts and a backend commute phase: waiting / approaching / at stop / on board / completed / missed / recovery available) and `GET /students/me/history` (recent commutes derived from stored trips, boardings and missed-bus alerts; boarded / missed / trip ended early / no boarding recorded). Trips record how they ended (`end_reason`); a simulator reset replays only its own day, so earlier days' history persists. Student dashboard: Today's Commute + Recent Commutes, realtime-driven | ✅ done |
-| 2 | Simulator, telemetry ingestion, WebSocket, live buses on the student map | next |
-| 3 | Stop selection, matching, baseline ETA, multi-bus arrivals | |
-| 4 | "Will I make my bus?", missed-bus recovery | |
-| 5 | Driver app, trip start/end, GPS, QR, capacity | |
-| 6 | Deviation detection, alerts, admin dashboard, sim controls | |
-| 7 | Synthetic history, scikit-learn ETA, Firebase Auth adapter | |
-
-## How the pieces connect
-
-Today (Phase 1):
-
-```
-MongoDB (Docker, seeded)  →  FastAPI /api/v1  →  Student React app (Vite, Leaflet + OSM)
-                              REST + auth (dev/password/oidc)  fetches stops, routes, geometry, /me
-```
-
-Live bus positions (Feature 3) — synthetic, but through the real pipeline:
-
-```
-SimClock → bus simulator ──(same function as POST /driver/telemetry)──▶ telemetry ingestion
-        → tracking → BusState (MongoDB) → event bus → WebSocket /api/v1/ws → Student · Driver · Admin
-                                         (REST: initial load, re-sync, 10 s fallback)
-```
-
-The simulator starts with FastAPI (exactly one per process), replays the
-morning from 07:15 at 5× and is controlled from the dashboard's **Demo mode**
-(start / pause / reset / 1–20×) or `/api/v1/sim/*`. Changes reach the apps over the
-WebSocket within ~1 s (`docs/realtime.md`).
-
-The frontend never holds domain data of its own: stops, routes, geometry and the
-signed-in user all come from FastAPI, which reads MongoDB.
 
 ## Run the full demo
 
