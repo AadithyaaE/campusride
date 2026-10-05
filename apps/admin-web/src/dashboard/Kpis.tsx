@@ -6,14 +6,21 @@ function Kpi({
   value,
   sub,
   title,
+  tone,
 }: {
   label: string;
   value: number | null;
   sub: string;
   title?: string;
+  tone?: "warn" | "crit";
 }) {
   return (
-    <div className="kpi" role="group" aria-label={label} title={title}>
+    <div
+      className={`kpi${tone ? ` kpi-${tone}` : ""}`}
+      role="group"
+      aria-label={label}
+      title={title}
+    >
       <span className="kpi-label">{label}</span>
       <span className="kpi-value">{value === null ? "—" : value.toLocaleString("en-IN")}</span>
       <span className="kpi-sub">{sub}</span>
@@ -46,9 +53,10 @@ export function KpiStrip({
         }
       />
       <Kpi
-        label="Students"
-        value={o?.students ?? null}
-        sub={o ? `${o.assigned_students} assigned to a bus` : "…"}
+        label="Active alerts"
+        value={o?.alerts.active ?? null}
+        sub={o ? `${o.alerts.critical} critical · ${o.alerts.unread} unread` : "…"}
+        tone={o && o.alerts.critical > 0 ? "crit" : o && o.alerts.active > 0 ? "warn" : undefined}
       />
       <Kpi
         label="Passengers today"
@@ -65,8 +73,8 @@ export function KpiStrip({
         >
           <strong>{o?.deviated_buses ?? "—"}</strong> off route
         </span>
-        <span className={`flag${o && o.alerts.critical > 0 ? " flag-crit" : ""}`}>
-          <strong>{o?.alerts.unread ?? "—"}</strong> unread alerts
+        <span className="flag">
+          <strong>{o?.students ?? "—"}</strong> students ({o?.assigned_students ?? "—"} assigned)
         </span>
       </div>
       {error && (

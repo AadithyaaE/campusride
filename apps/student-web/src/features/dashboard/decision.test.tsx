@@ -69,7 +69,7 @@ describe('"Will I make my bus?" — backend commute decision', () => {
     expect(card).toHaveClass("decision-missed");
     expect(card).toHaveTextContent("Your assigned bus has already passed your stop.");
     expect(card).not.toHaveTextContent("Walking time");
-    expect(card).toHaveTextContent("your assigned bus stays BX7"); // never switched
+    expect(card).toHaveTextContent("Your assigned bus stays BX7"); // never switched
     fireEvent.click(within(card).getByRole("button", { name: "See bus options" }));
     expect(onViewOptions).toHaveBeenCalled();
   });
@@ -118,7 +118,7 @@ describe('"Will I make my bus?" — backend commute decision', () => {
   it("labels the student location as simulated (demo, not GPS)", () => {
     const card = show(fx.myCommute);
     expect(card).toHaveTextContent("Simulated location");
-    expect(card).toHaveTextContent("Walk ≈ 340 m from your simulated location (demo, not GPS)");
+    expect(card).toHaveTextContent("Walk ≈ 340 m from your demo location");
   });
 
   it("uses the backend decision directly — it never re-decides from the numbers", () => {

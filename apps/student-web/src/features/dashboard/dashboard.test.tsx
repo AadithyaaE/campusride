@@ -58,16 +58,16 @@ describe("Dashboard — live state from the backend", () => {
     expect(within(card).getByLabelText("ETA 7 min")).toHaveTextContent("7 min");
     expect(card).toHaveTextContent("Moderate traffic");
     expect(card).toHaveTextContent("High confidence");
-    expect(card).toHaveTextContent("Arrival (sim time)07:27"); // backend estimated_arrival_time, campus time
+    expect(card).toHaveTextContent("Arrives at7:27 AM"); // backend estimated_arrival_time, campus time
     expect(card).toHaveTextContent("Current stopTest Stop C"); // backend position.current_stop
     expect(card).toHaveTextContent("Next stopTest Stop B"); // backend position.next_stop
     expect(card).toHaveTextContent("Boarding stop Test Stop B");
     expect(within(card).getByLabelText("Occupancy 20 of 50")).toBeInTheDocument();
-    expect(card).toHaveTextContent("Last updated 07:20:00 (sim time)");
+    expect(card).toHaveTextContent("Updated 7:20 AM");
     expect(backend.calls).toContain("GET /api/v1/students/me/arrivals");
     expect(backend.calls).toContain("GET /api/v1/buses");
     expect(screen.getByTitle("Your college-assigned boarding stop")).toHaveTextContent(
-      "Boarding stop: Test Stop B",
+      "Test Stop B",
     );
   });
 
@@ -157,7 +157,8 @@ describe("Dashboard — live state from the backend", () => {
     expect(within(card).getByLabelText("ETA 5 min")).toBeInTheDocument(); // next poll's backend ETA
   });
 
-  it("demo mode drives the backend simulator: pause, start, speed, reset", async () => {
+  it("demo mode (operator ?demo link) drives the backend simulator: pause, start, speed, reset", async () => {
+    window.history.replaceState(null, "", "/?demo=1");
     const { backend } = signedInApp();
     const panel = await screen.findByRole("region", { name: "Demo mode" });
     await flush();
@@ -190,6 +191,7 @@ describe("Dashboard — live state from the backend", () => {
   });
 
   it("hides simulator controls when the backend says the user may not use them", async () => {
+    window.history.replaceState(null, "", "/?demo=1");
     signedInApp({
       "GET /api/v1/sim/status": () => json({ ...fx.simStatus, controls_allowed: false }),
     });
@@ -247,12 +249,12 @@ describe("Dashboard — live state from the backend", () => {
     const decision = await screen.findByRole("region", { name: "Will I make my bus?" });
     expect(within(decision).getByRole("status")).toHaveTextContent("YES");
     expect(decision).toHaveTextContent("Can I catch bus BX7?");
-    expect(decision).toHaveTextContent("Rule-based estimate from the backend");
+    expect(decision).toHaveTextContent("Estimated from your bus's live position");
     const alerts = await screen.findByRole("list", { name: "Alert list" });
     expect(alerts).toHaveTextContent("Bus BX7 is running 8 minutes late.");
     expect(alerts).toHaveTextContent("Bus BX7 reaches your stop (Test Stop B) in 3 minutes.");
     // the header badge counts UNREAD backend alerts (2 of 3)
-    expect(screen.getByRole("button", { name: "Notifications (2)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Notifications, 2 unread" })).toBeInTheDocument();
   });
 
   it("shows the BACKEND bus comparison and highlights a picked bus on the map", async () => {
@@ -321,7 +323,7 @@ describe("Dashboard — live state from the backend", () => {
       },
     });
     const card = await screen.findByRole("region", { name: "Will I make my bus?" });
-    expect(backend.calls).toContain("GET /api/v1/students/me/commute-decision");
+    expect(backend.calls).toContain("GET /api/v1/students/me/commute"); // decision via the commute view
     expect(within(card).getByRole("status")).toHaveAccessibleName("Decision: YES");
     await pollOnce();
     await flush();
@@ -363,7 +365,7 @@ describe("Dashboard — live state from the backend", () => {
     const after = screen.getByRole("region", { name: "Missed-bus recovery" });
     expect(after).toHaveTextContent("Try BUS BX9 instead");
     expect(after).not.toHaveTextContent("BX8");
-    expect(backend.calls).toContain("GET /api/v1/students/me/recovery-options");
+    expect(backend.calls).toContain("GET /api/v1/students/me/commute"); // recovery via the commute view
     expect(backend.calls.filter((c) => c.includes("recovery-options?"))).toEqual([]); // no overrides
   });
 
@@ -407,15 +409,17 @@ describe("Dashboard — live state from the backend", () => {
       },
     });
     await screen.findByRole("list", { name: "Alert list" });
-    expect(screen.getByRole("button", { name: "Notifications (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Notifications, 1 unread" })).toBeInTheDocument();
     await pollOnce();
     await flush();
-    expect(screen.getByRole("button", { name: "Notifications (2)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Notifications, 2 unread" })).toBeInTheDocument();
     const panel = screen.getByRole("region", { name: "Notifications" });
-    fireEvent.click(within(panel).getByRole("button", { name: "Mark BUS APPROACHING read" }));
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "Mark Your bus is approaching read" }),
+    );
     await flush();
     expect(readId).toBe(fx.myAlerts[0]!.alert_id);
-    expect(screen.getByRole("button", { name: "Notifications (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Notifications, 1 unread" })).toBeInTheDocument();
     expect(backend.calls.some((c) => c.startsWith("GET /api/v1/alerts"))).toBe(true);
     // the other dashboard cards stay
     expect(screen.getByRole("region", { name: "My bus live" })).toBeInTheDocument();
@@ -516,7 +520,14 @@ describe("Dashboard — unassigned student", () => {
     expect(mapProps.current?.buses.some((b) => b.highlight || b.serving)).toBe(false);
     expect(screen.queryByRole("list", { name: "Other buses at my stop" })).not.toBeInTheDocument();
     expect(backend.calls).toContain("GET /api/v1/students/me/arrivals");
-    expect(screen.getByRole("region", { name: "Demo mode" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Demo mode" })).not.toBeInTheDocument(); // operator-only
+  });
+
+  it("students never see simulator controls without the operator ?demo link", async () => {
+    signedInApp();
+    await screen.findByRole("region", { name: "Today's commute" });
+    expect(screen.queryByRole("region", { name: "Demo mode" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /simulation/ })).not.toBeInTheDocument();
   });
 });
 

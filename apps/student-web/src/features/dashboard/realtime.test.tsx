@@ -30,6 +30,7 @@ async function connectedApp(overrides: Parameters<typeof fakeBackend>[0] = {}) {
   const api = new ApiClient({
     baseUrl: "http://backend.test/api/v1",
     getToken: () => store.get()?.token ?? null,
+    onUnauthorized: () => store.clear(), // as in main.tsx
     fetchImpl: backend.fetchImpl,
   });
   render(<App api={api} store={store} />);
@@ -38,7 +39,7 @@ async function connectedApp(overrides: Parameters<typeof fakeBackend>[0] = {}) {
   await act(async () => sock.accept({ role: "student", heartbeat_s: 20 }));
   await settle();
   const count = (key: string) => backend.calls.filter((c) => c === key).length;
-  return { backend, sock, count };
+  return { backend, sock, count, store };
 }
 
 const push = async (sock: FakeWebSocket, type: string, data: unknown, over = {}) => {
@@ -49,7 +50,7 @@ const push = async (sock: FakeWebSocket, type: string, data: unknown, over = {})
 };
 
 const marker = (id: string) => mapProps.current?.buses.find((b) => b.id === id);
-const feed = () => screen.getAllByRole("status", { name: "Live updates" })[0]!;
+const feed = () => screen.getByRole("status", { name: "Connection" }); // header live pill
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
@@ -63,7 +64,7 @@ describe("Student real-time (Feature 14)", () => {
     const { sock, count } = await connectedApp();
     expect(sock.url).toBe("ws://backend.test/api/v1/ws");
     expect(sock.sent[0]).toEqual({ type: "auth", token: "mock.saved" });
-    expect(feed()).toHaveTextContent("Live · real-time updates");
+    expect(feed()).toHaveTextContent("Live");
     expect(count("GET /api/v1/buses")).toBe(2); // initial load + re-sync after connecting
     await act(async () => {
       vi.advanceTimersByTime(FALLBACK_POLL_MS * 3); // live: no fast polling
@@ -114,8 +115,7 @@ describe("Student real-time (Feature 14)", () => {
     await wait(DERIVED_THROTTLE_MS + 100);
     expect(count("GET /api/v1/students/me/arrivals")).toBe(before + 1); // throttled: once
     expect(count("GET /api/v1/students/me/bus-options")).toBe(before + 1);
-    expect(count("GET /api/v1/students/me/commute-decision")).toBe(before + 1);
-    expect(count("GET /api/v1/students/me/recovery-options")).toBe(before + 1);
+    expect(count("GET /api/v1/students/me/commute")).toBe(before + 1); // decision + recovery + boarding
     // a bus unrelated to this student's stop changes nothing
     await push(sock, "eta.updated", { bus_id: "B-OTHER", eta_minutes: 2 });
     await wait(DERIVED_THROTTLE_MS + 100);
@@ -169,7 +169,7 @@ describe("Student real-time (Feature 14)", () => {
     const { sock, count } = await connectedApp();
     await act(async () => sock.drop());
     await settle();
-    expect(feed()).toHaveTextContent("Live updates reconnecting · checking every 10 s");
+    expect(feed()).toHaveTextContent("Reconnecting…");
     const n = count("GET /api/v1/buses");
     await act(async () => {
       vi.advanceTimersByTime(FALLBACK_POLL_MS);
@@ -183,7 +183,7 @@ describe("Student real-time (Feature 14)", () => {
     await settle();
     expect(again.sent[0]).toEqual({ type: "auth", token: "mock.saved" });
     expect(count("GET /api/v1/buses")).toBe(n + 2); // authoritative re-sync
-    expect(feed()).toHaveTextContent("Live · real-time updates");
+    expect(feed()).toHaveTextContent("Live");
   });
 
   it("re-fetches everything after a simulator reset and answers heartbeats", async () => {
@@ -193,5 +193,15 @@ describe("Student real-time (Feature 14)", () => {
     const n = count("GET /api/v1/sim/status");
     await push(sock, "sim.reset", {});
     expect(count("GET /api/v1/sim/status")).toBe(n + 1);
+  });
+
+  it("a refused session on the socket (4401) signs the student out — no retry loop", async () => {
+    const { sock, store } = await connectedApp();
+    await act(async () => sock.drop(4401));
+    await settle();
+    expect(store.get()).toBeNull();
+    expect(await screen.findByRole("form", { name: "Student sign in" })).toBeInTheDocument();
+    await wait(1_100);
+    expect(FakeWebSocket.instances.filter((s) => s.readyState !== 3)).toHaveLength(0);
   });
 });

@@ -24,8 +24,8 @@ export const ROUTE_STATUS_LABEL: Record<string, string> = {
 
 export const TRIP_LABEL: Record<string, string> = {
   READY: "READY",
-  ACTIVE: "ACTIVE",
-  COMPLETED: "COMPLETED",
+  ACTIVE: "DRIVING",
+  COMPLETED: "TRIP COMPLETED",
   NO_TRIP: "NO TRIP TODAY",
   NO_ASSIGNMENT: "NO BUS ASSIGNED",
 };

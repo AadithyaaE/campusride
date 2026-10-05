@@ -62,8 +62,13 @@ describe("Control room — KPIs and alerts", () => {
     expect(within(kpis).getByRole("group", { name: "Total buses" })).toHaveTextContent("12");
     expect(within(kpis).getByRole("group", { name: "Total buses" })).toHaveTextContent("5 on trip");
     expect(within(kpis).getByRole("group", { name: "Active trips" })).toHaveTextContent("5");
-    expect(within(kpis).getByRole("group", { name: "Students" })).toHaveTextContent("300");
-    expect(within(kpis).getByRole("group", { name: "Students" })).toHaveTextContent("296 assigned");
+    expect(within(kpis).getByRole("group", { name: "Active alerts" })).toHaveTextContent("3");
+    expect(within(kpis).getByRole("group", { name: "Active alerts" })).toHaveTextContent(
+      "1 critical · 3 unread",
+    );
+    expect(within(kpis).getByLabelText("Exceptions")).toHaveTextContent(
+      "300 students (296 assigned)",
+    );
     expect(within(kpis).getByRole("group", { name: "Passengers today" })).toHaveTextContent("187");
     expect(within(kpis).getByRole("group", { name: "Passengers today" })).toHaveTextContent(
       "4 QR boardings",
@@ -412,7 +417,7 @@ describe("Control room — loading, errors and polling", () => {
       "The CampusRide backend is not reachable.",
     );
     expect(screen.getByRole("status", { name: "Live status" })).toHaveTextContent(
-      "Backend unreachable",
+      "Connection lost",
     );
     expect(screen.getByText("Fleet data is unavailable.")).toBeInTheDocument();
   });

@@ -25,6 +25,8 @@ import { BusDetail } from "./BusDetail";
 import type { MapRoute } from "./FleetMap";
 import { applyFleetFilter, type FleetFilter, isFiltered, NO_FILTER } from "./fleetFilter";
 import { FleetFilters, FleetTable } from "./FleetTable";
+import { DemoControls } from "./DemoControls";
+import { FleetStatus } from "./FleetStatus";
 import { KpiStrip } from "./Kpis";
 import { ActiveBuses, DelaysPanel, DeviationsPanel, OccupancyPanel } from "./OpsPanels";
 import { RouteDetailPanel, RoutesPanel, SchedulePanel } from "./RoutesSchedule";
@@ -193,13 +195,13 @@ export function ControlRoom({ api }: { api: AdminApi }) {
           ) : (
             "—"
           )}
-          <span className="sim-tag">Synthetic simulation</span>
+          <span className="sim-tag">Demo data</span>
         </span>
         <span
           className={`live ${offline ? "is-offline" : status === "live" ? "is-live" : "is-fallback"}`}
         >
           {offline
-            ? "Backend unreachable"
+            ? "Connection lost"
             : status === "live"
               ? "Live · real-time"
               : fleet.data
@@ -227,7 +229,7 @@ export function ControlRoom({ api }: { api: AdminApi }) {
             <span className="legend small" aria-label="Map legend">
               <span className="pin-key st-active">Active</span>
               <span className="pin-key st-delayed">Delayed</span>
-              <span className="pin-key st-deviated">Deviated</span>
+              <span className="pin-key st-deviated">Off route</span>
               <span className="pin-key st-waiting">Waiting</span>
               <span className="pin-key st-completed">Idle / done</span>
             </span>
@@ -246,8 +248,7 @@ export function ControlRoom({ api }: { api: AdminApi }) {
             </Suspense>
           )}
           <p className="footnote">
-            Planned route lines and tracked bus positions from the backend (synthetic GPS). Click a
-            bus for details.
+            Planned routes and live bus positions. Click a bus for details.
             {isFiltered(filter) && " Filters apply to the map."}
           </p>
         </section>
@@ -271,13 +272,15 @@ export function ControlRoom({ api }: { api: AdminApi }) {
               onClose={close}
             />
           ) : (
-            <section className="panel hint" aria-label="Detail hint">
-              <h2>Details</h2>
-              <p className="muted">
-                Select a bus on the map or in the fleet table, or a route, to see its live details.
-              </p>
-            </section>
+            <FleetStatus
+              rows={all}
+              onFilter={(status) => {
+                setFilter({ ...NO_FILTER, status });
+                document.getElementById("fleet")?.scrollIntoView?.({ behavior: "smooth" });
+              }}
+            />
           )}
+          {!selectedBus && !selectedRoute && <DemoControls api={api} rows={all} />}
         </aside>
       </div>
 
@@ -309,10 +312,7 @@ export function ControlRoom({ api }: { api: AdminApi }) {
             onSelectRoute={selectRoute}
           />
         )}
-        <p className="footnote">
-          ETA to the next stop (Feature 5), occupancy (Feature 8), route status (Feature 10) and
-          delay are computed by the backend and pushed in real time (WebSocket).
-        </p>
+        <p className="footnote">ETA, occupancy, route status and delay update in real time.</p>
       </section>
 
       <ActiveBuses rows={filtered} onSelectBus={selectBus} />

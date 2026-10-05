@@ -33,7 +33,7 @@ describe("Scan Boarding QR (simulated scanner → POST /boarding/scan)", () => {
   it("shows the assigned bus, stop, trip and a clearly simulated scanner", async () => {
     show();
     const scanner = await screen.findByRole("region", { name: "Simulated QR scanner" });
-    expect(scanner).toHaveTextContent("Simulated scanner — prototype, not a real camera");
+    expect(scanner).toHaveTextContent("Demo scanner — simulates scanning the QR code on your bus");
     expect(scanner).toHaveTextContent("Assigned busBUS BX7");
     expect(scanner).toHaveTextContent("Boarding stopTest Stop B");
     expect(scanner).toHaveTextContent("TripT-TEST-T2");

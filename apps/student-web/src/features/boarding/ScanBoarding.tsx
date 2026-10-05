@@ -99,7 +99,7 @@ export function SimulatedScanner({
         <span className="scanner-qr">▣</span>
         <span className="scanner-line" />
       </div>
-      <p className="scanner-label">Simulated scanner — prototype, not a real camera or secure QR</p>
+      <p className="scanner-label">Demo scanner — simulates scanning the QR code on your bus</p>
       <dl className="scanner-facts">
         <div>
           <dt>Student</dt>

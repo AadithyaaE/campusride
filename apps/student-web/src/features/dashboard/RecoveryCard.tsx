@@ -39,7 +39,11 @@ export function RecoveryCard({
   const mine = r.assigned_bus ?? "your bus";
   const rec = r.recommended;
   return (
-    <section className={`live-card recovery recovery-${trigger}`} aria-label="Missed-bus recovery">
+    <section
+      id="recovery"
+      className={`live-card recovery recovery-${trigger}`}
+      aria-label="Missed-bus recovery"
+    >
       <header className="live-card-head">
         <p className="eyebrow">Recovery</p>
         <SimTag label="Suggestion" />

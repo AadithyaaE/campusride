@@ -31,9 +31,9 @@ describe("Student notifications panel (backend Feature 11 alerts, displayed as g
     expect(within(panel).getByLabelText("2 unread")).toHaveTextContent("2");
     const items = within(panel).getAllByRole("listitem");
     expect(items.map((i) => i.getAttribute("aria-label"))).toEqual([
-      "BUS APPROACHING (unread)",
-      "BUS DELAYED (unread)",
-      "ALTERNATIVE AVAILABLE",
+      "Your bus is approaching (unread)",
+      "Your bus is delayed (unread)",
+      "Another bus can get you there",
     ]);
     expect(items[0]).toHaveClass("is-unread");
     expect(items[2]).toHaveClass("is-read");
@@ -50,8 +50,8 @@ describe("Student notifications panel (backend Feature 11 alerts, displayed as g
       ),
     );
     const items = screen.getAllByRole("listitem");
-    ALL.forEach(([, icon, message], i) => {
-      expect(items[i]).toHaveTextContent(icon);
+    ALL.forEach(([, , message], i) => {
+      expect(items[i]!.querySelector("svg.icon")).not.toBeNull(); // one consistent icon set
       expect(items[i]).toHaveTextContent(message); // exactly the backend message
       expect(items[i]).toHaveTextContent("3 min ago");
     });
@@ -76,7 +76,7 @@ describe("Student notifications panel (backend Feature 11 alerts, displayed as g
 
   it("shows an empty state", () => {
     show([]);
-    expect(screen.getByText("No notifications yet")).toBeInTheDocument();
+    expect(screen.getByText("You're all caught up")).toBeInTheDocument();
   });
 
   it("generates nothing itself — shows only what the backend returned", async () => {

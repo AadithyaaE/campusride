@@ -64,6 +64,19 @@ export function formatCampusTime(iso: string): string {
 
 export const CAMPUS_TIME_ZONE = "Asia/Kolkata";
 
+const clockFmt = new Intl.DateTimeFormat("en-IN", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: CAMPUS_TIME_ZONE,
+});
+
+/** Campus-local time for people, e.g. "7:31 AM" (one formatter for every student-facing time). */
+export function formatClock(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return clockFmt.format(new Date(iso)).replace(/s?(am|pm)$/i, (m) => ` ${m.trim().toUpperCase()}`);
+}
+
 /** Backend `stops_away` → "at the stop" / "next stop" / "3 stops away" (null when passed). */
 export function stopsAwayText(n: number | null | undefined): string | null {
   if (n === null || n === undefined) return null;

@@ -96,7 +96,7 @@ export function BusDetail({
         <span className="muted"> · fix {hms(bus.last_updated)}</span>
       </>,
     ],
-    ["Source", bus.source === "sim" ? "Synthetic simulator" : "Driver device"],
+    ["Source", bus.source === "sim" ? "Demo simulator" : "Driver device"],
   ];
   return (
     <section className="panel detail" aria-label="Bus detail">

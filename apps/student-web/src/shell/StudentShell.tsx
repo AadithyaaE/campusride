@@ -101,6 +101,7 @@ export function StudentShell({ me, onLogout }: Props) {
       <Header
         me={me}
         health={health}
+        realtime={fleet.realtime}
         boardingStopName={myAssignment?.boarding_stop.name ?? null}
         alertCount={(fleet.alerts ?? []).filter((x) => !x.read).length}
         onOpenAlerts={() => openSection("alerts")}
@@ -173,9 +174,7 @@ export function StudentShell({ me, onLogout }: Props) {
             ))}
           </nav>
           <div className="panel-scroll">
-            {network.status === "loading" && (
-              <Loading label="Loading stops and routes from the backend…" />
-            )}
+            {network.status === "loading" && <Loading label="Loading the bus network…" />}
             {network.status === "error" && (
               <ErrorState error={network.error} onRetry={network.reload} />
             )}

@@ -113,9 +113,7 @@ export function OccupancyPanel({ rows, onSelectBus }: { rows: FleetBus[]; onSele
           </tbody>
         </table>
       )}
-      <p className="footnote">
-        Feature 8 occupancy: synthetic headcount + QR boardings, computed by the backend.
-      </p>
+      <p className="footnote">Passenger counts include QR boardings.</p>
     </section>
   );
 }
@@ -211,7 +209,7 @@ export function DelaysPanel({ rows, onSelectBus }: { rows: FleetBus[]; onSelectB
           ))}
         </ul>
       )}
-      <p className="footnote">Backend delay rule: ≥ 5 min behind the timetable while running.</p>
+      <p className="footnote">Delayed = 5 or more minutes behind the timetable.</p>
     </section>
   );
 }

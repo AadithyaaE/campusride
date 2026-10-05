@@ -8,7 +8,7 @@
   --surface-2: #f8fafc;
   --border: #e2e8f0;
   --text: #0f172a;
-  --muted: #64748b;
+  --muted: #556377; /* ≥ 5:1 on white and on --bg, for small labels */
   --ok: #16a34a;
   --bad: #dc2626;
   --warn-bg: #fff7ed;
@@ -16,7 +16,7 @@
   --shared: #f59e0b;
   --radius: 12px;
   --shadow: 0 1px 2px rgb(15 23 42 / 6%), 0 4px 16px rgb(15 23 42 / 6%);
-  --panel-w: 400px;
+  --panel-w: 440px;
   --topbar-h: 56px;
   --tabbar-h: 60px;
   color-scheme: light;
@@ -222,8 +222,23 @@ h3 {
   background: #fee2e2;
   color: var(--bad);
 }
+.pill-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
 .pill-muted {
   color: rgb(255 255 255 / 75%);
+}
+.stop-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.stop-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pill-muted .pill-dot {
   background: rgb(255 255 255 / 45%);
@@ -848,32 +863,8 @@ h3 {
   font: inherit;
 }
 
-/* ------------------------------------------------------------------ login */
+/* ------------------------------------------------------------------ forms */
 
-.login {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 24px 16px;
-  background: linear-gradient(160deg, #e0f2fe, var(--bg) 60%);
-}
-.login-card {
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 28px 24px;
-  background: var(--surface);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-}
-.login-card h1 {
-  font-size: 1.4rem;
-}
-.login-card p {
-  margin: 0;
-}
 .field {
   display: flex;
   flex-direction: column;

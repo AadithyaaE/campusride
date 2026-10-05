@@ -460,6 +460,36 @@ export const TRIP_BOARDING: TripBoardingOut = {
   ],
 };
 
+export const DEV_AUTH = {
+  mode: "dev",
+  development: true,
+  dev_login: true,
+  password_login: false,
+  external_provider: false,
+  oidc_issuer: null,
+};
+export const PASSWORD_AUTH = {
+  ...DEV_AUTH,
+  mode: "password",
+  development: false,
+  dev_login: false,
+  password_login: true,
+};
+
+const token = (method: "dev" | "password") => ({
+  access_token: "mock.t",
+  token_type: "bearer",
+  expires_at: "2099-01-01T00:00:00Z",
+  auth_method: method,
+  user: {
+    id: "U-A1",
+    role: "admin",
+    name: "Transport Office",
+    email: "admin1@campusride.demo",
+    active: true,
+  },
+});
+
 export type Handler = (key: string, body: unknown) => Response | Promise<Response> | undefined;
 
 export interface FakeBackend {
@@ -481,12 +511,14 @@ export function fakeBackend(override?: Handler): FakeBackend {
     const routeMatch = /^GET \/api\/v1\/routes\/(\w+)$/.exec(key);
     if (routeMatch) return json(routeDetail(routeMatch[1]!));
     switch (key) {
-      case "POST /api/v1/auth/mock-login":
-        return json({
-          access_token: "mock.t",
-          token_type: "bearer",
-          expires_at: "2099-01-01T00:00:00Z",
-        });
+      case "GET /api/v1/auth/config":
+        return json(DEV_AUTH);
+      case "POST /api/v1/auth/dev-login":
+        return json(token("dev"));
+      case "POST /api/v1/auth/login":
+        return (body as { password?: string }).password === "right-password"
+          ? json(token("password"))
+          : json({ error: { code: "unauthorized", message: "invalid email or password" } }, 401);
       case "GET /api/v1/me":
         return json({
           id: "U-A1",
@@ -521,9 +553,37 @@ export function fakeBackend(override?: Handler): FakeBackend {
         return json(TRIP_BOARDING);
     }
     if (key.startsWith("PATCH /api/v1/alerts/")) return json({ ...ALERTS[0], read: true });
+    const sim = {
+      enabled: true,
+      running: true,
+      paused: key === "POST /api/v1/sim/pause",
+      speed: key === "PUT /api/v1/sim/speed" ? (body as { speed: number }).speed : 5,
+      allowed_speeds: [1, 2, 5, 10, 20],
+      sim_time: "2026-10-05T02:10:00Z",
+      local_time: "2026-10-05T07:40:00+05:30",
+      start_time: "2026-10-05T01:45:00Z",
+      service_date: "2026-10-05",
+      buses: 12,
+      emissions: 10,
+      telemetry_interval_s: 5,
+      controls_allowed: true,
+      driver_controlled_buses: ["B07"],
+      route_deviation: {},
+    };
+    if (
+      [
+        "GET /api/v1/sim/status",
+        "POST /api/v1/sim/start",
+        "POST /api/v1/sim/pause",
+        "POST /api/v1/sim/reset",
+        "PUT /api/v1/sim/speed",
+      ].includes(key)
+    ) {
+      return json(sim);
+    }
     if (key === "POST /api/v1/sim/route-deviation") {
       const mode = (body as { mode: string }).mode;
-      return json({ enabled: true, route_deviation: mode === "normal" ? {} : { B05: mode } });
+      return json({ ...sim, route_deviation: mode === "normal" ? {} : { B05: mode } });
     }
     return json({ error: { code: "not_found", message: key } }, 404);
   };

@@ -38,76 +38,80 @@ export function RoutesPanel({
       ) : routes.length === 0 ? (
         <p className="empty">No routes configured.</p>
       ) : (
-        <table className="grid compact" aria-label="Routes table">
-          <thead>
-            <tr>
-              <th>Route</th>
-              <th>Directions</th>
-              <th className="num">Stops</th>
-              <th className="num">Distance</th>
-              <th className="num">Active buses</th>
-              <th className="num">Trips today</th>
-              <th>Issues</th>
-            </tr>
-          </thead>
-          <tbody>
-            {routes.map((r) => (
-              <tr
-                key={r.id}
-                aria-label={`Route ${r.id}`}
-                className={selectedRouteId === r.id ? "is-selected" : ""}
-                onClick={() => onSelectRoute(r.id)}
-              >
-                <th scope="row">
-                  <button
-                    type="button"
-                    className="route-chip"
-                    style={{ ["--route" as string]: r.color }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectRoute(r.id);
-                    }}
-                    aria-label={`Open route ${r.id}`}
-                  >
-                    {r.id}
-                  </button>
-                  <span className="sub">{r.name}</span>
-                </th>
-                <td>
-                  {r.directions.map((d) => (
-                    <span key={d.variant_id} className="sub">
-                      {d.label}: {d.first_stop.name} → {d.last_stop.name}
-                    </span>
-                  ))}
-                </td>
-                <td className="num">{r.directions[0]?.stop_count ?? "—"}</td>
-                <td className="num">{r.length_km} km</td>
-                <td className="num">
-                  {r.active_buses.length}/{r.assigned_buses.length}
-                </td>
-                <td className="num">
-                  {r.trips_today.total}
-                  <span className="sub">
-                    {r.trips_today.active} active · {r.trips_today.completed} done
-                  </span>
-                </td>
-                <td>
-                  {r.delayed_buses.length > 0 && (
-                    <span className="badge-ops ops-delayed">{r.delayed_buses.length} delayed</span>
-                  )}
-                  {r.deviated_buses.length > 0 && (
-                    <span className="badge-ops ops-deviated">
-                      {r.deviated_buses.length} deviated
-                    </span>
-                  )}
-                  {r.delayed_buses.length === 0 && r.deviated_buses.length === 0 && (
-                    <span className="muted small">—</span>
-                  )}
-                </td>
+        <div className="table-wrap">
+          <table className="grid compact routes-table" aria-label="Routes table">
+            <thead>
+              <tr>
+                <th>Route</th>
+                <th>Directions</th>
+                <th className="num">Stops</th>
+                <th className="num">Distance</th>
+                <th className="num">Active buses</th>
+                <th className="num">Trips today</th>
+                <th>Issues</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {routes.map((r) => (
+                <tr
+                  key={r.id}
+                  aria-label={`Route ${r.id}`}
+                  className={selectedRouteId === r.id ? "is-selected" : ""}
+                  onClick={() => onSelectRoute(r.id)}
+                >
+                  <th scope="row">
+                    <button
+                      type="button"
+                      className="route-chip"
+                      style={{ ["--route" as string]: r.color }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectRoute(r.id);
+                      }}
+                      aria-label={`Open route ${r.id}`}
+                    >
+                      {r.id}
+                    </button>
+                    <span className="sub">{r.name}</span>
+                  </th>
+                  <td>
+                    {r.directions.map((d) => (
+                      <span key={d.variant_id} className="sub">
+                        {d.label}: {d.first_stop.name} → {d.last_stop.name}
+                      </span>
+                    ))}
+                  </td>
+                  <td className="num">{r.directions[0]?.stop_count ?? "—"}</td>
+                  <td className="num">{r.length_km} km</td>
+                  <td className="num">
+                    {r.active_buses.length}/{r.assigned_buses.length}
+                  </td>
+                  <td className="num">
+                    {r.trips_today.total}
+                    <span className="sub">
+                      {r.trips_today.active} active · {r.trips_today.completed} done
+                    </span>
+                  </td>
+                  <td>
+                    {r.delayed_buses.length > 0 && (
+                      <span className="badge-ops ops-delayed">
+                        {r.delayed_buses.length} delayed
+                      </span>
+                    )}
+                    {r.deviated_buses.length > 0 && (
+                      <span className="badge-ops ops-deviated">
+                        {r.deviated_buses.length} deviated
+                      </span>
+                    )}
+                    {r.delayed_buses.length === 0 && r.deviated_buses.length === 0 && (
+                      <span className="muted small">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

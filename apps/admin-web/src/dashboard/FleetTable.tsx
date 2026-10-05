@@ -5,8 +5,8 @@
  */
 import type { AdminFleet, FleetBus } from "../api/client";
 import { ageText, busNo, dash, delayText, etaText } from "../format";
-import { DIRECTION_LABEL } from "../labels";
-import { GpsBadge, OccupancyCell, OpsBadge, RouteStatusBadge } from "./Badges";
+import { DIRECTION_LABEL, OPS_LABEL } from "../labels";
+import { OccupancyCell, OpsBadge, RouteStatusBadge } from "./Badges";
 import { type FleetFilter, isFiltered, NO_FILTER } from "./fleetFilter";
 
 export function FleetFilters({
@@ -61,7 +61,7 @@ export function FleetFilters({
           <option value="">All status</option>
           {opts?.statuses.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.label}
+              {OPS_LABEL[o.value] ?? o.label}
             </option>
           ))}
         </select>
@@ -109,7 +109,8 @@ export function FleetTable({
             <th className="num">Delay</th>
             <th>Occupancy</th>
             <th>Route status</th>
-            <th>GPS</th>
+            <th>Driver</th>
+            <th>Alerts</th>
           </tr>
         </thead>
         <tbody>
@@ -175,9 +176,30 @@ export function FleetTable({
                     <span className="sub">{Math.round(b.deviation_distance_m)} m off route</span>
                   )}
               </td>
+              <td className="driver-cell">
+                {b.driver?.name ?? "—"}
+                {b.gps !== "LIVE" && (
+                  <span className={`sub gps-${b.gps.toLowerCase()}`}>
+                    {b.gps === "STALE" ? `GPS stale · ${ageText(b.gps_age_s)}` : "No GPS yet"}
+                  </span>
+                )}
+              </td>
               <td>
-                <GpsBadge gps={b.gps} />
-                <span className="sub">{ageText(b.gps_age_s)}</span>
+                {b.active_alerts.length === 0 ? (
+                  <span className="muted">—</span>
+                ) : (
+                  <span
+                    className={`alert-count sev-${
+                      b.active_alerts.some((a) => a.severity === "critical")
+                        ? "critical"
+                        : "warning"
+                    }`}
+                    title={b.active_alerts.map((a) => a.message).join(" · ")}
+                    aria-label={`${b.active_alerts.length} active alert${b.active_alerts.length === 1 ? "" : "s"}`}
+                  >
+                    {b.active_alerts.length}
+                  </span>
+                )}
               </td>
             </tr>
           ))}

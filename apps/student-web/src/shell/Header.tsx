@@ -1,11 +1,15 @@
 import { useState } from "react";
 
 import type { MeOut } from "../api/types";
+import { Icon } from "../components/Icon";
 import type { HealthState } from "../hooks/useHealth";
+import type { RealtimeStatus } from "../realtime/client";
 
 interface Props {
   me: MeOut;
   health: HealthState;
+  /** Live-update connection (Feature 14 WebSocket). */
+  realtime: RealtimeStatus;
   /** College-assigned boarding stop (null while loading / unassigned). */
   boardingStopName: string | null;
   alertCount: number;
@@ -21,53 +25,51 @@ const initials = (name: string) =>
     .map((p) => p[0]!.toUpperCase())
     .join("");
 
+/** One calm status: are we showing live information? */
+function connection(health: HealthState, realtime: RealtimeStatus) {
+  if (health.reachable === false) return { cls: "pill-bad", text: "Offline" };
+  if (realtime === "live") return { cls: "pill-ok", text: "Live" };
+  if (realtime === "offline") return { cls: "pill-warn", text: "Reconnecting…" };
+  return { cls: "pill-muted", text: "Connecting…" };
+}
+
 export function Header({
   me,
   health,
+  realtime,
   boardingStopName,
   alertCount,
   onOpenAlerts,
   onLogout,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const backend =
-    health.reachable === null
-      ? { cls: "pill-muted", text: "Checking backend…", short: "Checking" }
-      : health.reachable
-        ? { cls: "pill-ok", text: "Backend connected", short: "Online" }
-        : { cls: "pill-bad", text: "Backend unreachable", short: "Offline" };
+  const live = connection(health, realtime);
 
   return (
     <header className="topbar">
       <div className="brand">
         <span className="brand-mark" aria-hidden="true">
-          CR
+          <Icon name="bus" size={18} />
         </span>
         <span className="brand-name">CampusRide</span>
       </div>
 
       {boardingStopName && (
         <span className="stop-chip" title="Your college-assigned boarding stop">
-          <span aria-hidden="true">📍</span>
-          <span className="label-long">Boarding stop: </span>
-          {boardingStopName}
+          <Icon name="pin" size={14} />
+          <span className="stop-chip-text">{boardingStopName}</span>
         </span>
       )}
 
       <div className="topbar-status">
-        <span className={`pill ${backend.cls}`} role="status">
-          <span className="pill-dot" aria-hidden="true" />
-          <span className="label-long">{backend.text}</span>
-          <span className="label-short" aria-hidden="true">
-            {backend.short}
-          </span>
-        </span>
         <span
-          className="pill pill-muted"
-          title="Bus positions come from the backend's synthetic simulator — not real GPS"
+          className={`pill ${live.cls}`}
+          role="status"
+          aria-label="Connection"
+          title="Bus positions are synthetic demo data from the CampusRide simulator"
         >
           <span className="pill-dot" aria-hidden="true" />
-          Simulated live tracking
+          {live.text}
         </span>
       </div>
 
@@ -75,9 +77,9 @@ export function Header({
         type="button"
         className="icon-btn"
         onClick={onOpenAlerts}
-        aria-label={`Notifications (${alertCount})`}
+        aria-label={alertCount > 0 ? `Notifications, ${alertCount} unread` : "Notifications"}
       >
-        <span aria-hidden="true">🔔</span>
+        <Icon name="bell" size={19} />
         {alertCount > 0 && (
           <span className="icon-badge" aria-hidden="true">
             {alertCount}
@@ -91,7 +93,7 @@ export function Header({
           className="avatar"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
-          aria-label={`Profile: ${me.name}`}
+          aria-label={`Account: ${me.name}`}
           onClick={() => setMenuOpen((o) => !o)}
         >
           {initials(me.name)}

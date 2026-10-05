@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { ScanBoarding } from "../boarding/ScanBoarding";
+import { Icon } from "../../components/Icon";
 
 interface Props {
   busId: string | null;
@@ -28,16 +29,20 @@ export function QuickActions({
       <h3 className="section-title">Quick actions</h3>
       <div className="quick-actions">
         <button type="button" className="qa" onClick={onViewStop}>
-          <span aria-hidden="true">📍</span>View boarding stop
+          <Icon name="pin" size={20} />
+          View boarding stop
         </button>
         <button type="button" className="qa" onClick={onViewAllBuses}>
-          <span aria-hidden="true">🚌</span>View all buses
+          <Icon name="bus" size={20} />
+          View all buses
         </button>
         <button type="button" className="qa" onClick={() => setQrOpen(true)}>
-          <span aria-hidden="true">▣</span>Scan Boarding QR
+          <Icon name="ticket" size={20} />
+          Scan Boarding QR
         </button>
         <button type="button" className="qa" onClick={onViewRoute}>
-          <span aria-hidden="true">🗺</span>View route
+          <Icon name="route" size={20} />
+          View route
         </button>
       </div>
       {qrOpen && (

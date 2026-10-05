@@ -11,7 +11,7 @@ import type {
 } from "../../api/types";
 import { DirectionTag, RouteChip } from "../../components/Badges";
 import { countdownLabel, useWallClock, type SimReference } from "../../lib/countdown";
-import { formatCampusTime, formatDistance, stopsAwayText } from "../../lib/format";
+import { formatClock, formatDistance, stopsAwayText } from "../../lib/format";
 import { hasEta, PROXIMITY_LABEL, STATUS_LABEL } from "./interim";
 
 export function SimTag({ label = "Simulated" }: { label?: string }) {
@@ -216,10 +216,10 @@ export function MyBusLiveCard({
               </dd>
             </div>
             <div>
-              <dt>Arrival (sim time)</dt>
+              <dt>Arrives at</dt>
               <dd>
                 {hasEta(bus) && bus.eta.estimated_arrival_time
-                  ? formatCampusTime(bus.eta.estimated_arrival_time).slice(0, 5)
+                  ? formatClock(bus.eta.estimated_arrival_time)
                   : "—"}
               </dd>
             </div>
@@ -260,8 +260,8 @@ export function MyBusLiveCard({
             {bus.position.previous_stop && (
               <> · previous stop {bus.position.previous_stop.name}</>
             )}{" "}
-            · {assignment.bus.reg_no} · Last updated{" "}
-            <time dateTime={bus.last_updated}>{formatCampusTime(bus.last_updated)}</time> (sim time)
+            · {assignment.bus.reg_no} · Updated{" "}
+            <time dateTime={bus.last_updated}>{formatClock(bus.last_updated)}</time>
           </p>
         </>
       )}
@@ -351,9 +351,9 @@ export function DecisionCard({
       )}
       <p className="footnote">
         {d.student_location && d.walking_distance_m !== null
-          ? `Walk ≈ ${formatDistance(d.walking_distance_m)} from your simulated location (demo, not GPS). `
+          ? `Walk ≈ ${formatDistance(d.walking_distance_m)} from your demo location. `
           : ""}
-        Rule-based estimate from the backend; your assigned bus stays {d.bus_number}.
+        Estimated from your bus's live position. Your assigned bus stays {d.bus_number}.
       </p>
     </section>
   );

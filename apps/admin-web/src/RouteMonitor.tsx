@@ -65,7 +65,7 @@ export function RouteMonitor({ api, busId }: { api: AdminApi; busId: string }) {
     <section className="subpanel" aria-label="Route monitor">
       <header className="panel-head">
         <h3>Route monitor · BUS {busId}</h3>
-        <span className="sim-tag">Synthetic GPS</span>
+        <span className="sim-tag">Demo GPS</span>
       </header>
       {error && (
         <p className="error" role="alert">
@@ -117,8 +117,8 @@ export function RouteMonitor({ api, busId }: { api: AdminApi; busId: string }) {
         ))}
       </div>
       <p className="footnote">
-        Demo controls move this bus’s SYNTHETIC GPS sideways in the backend simulator; the planned
-        route never changes. The backend re-evaluates on the next fix.
+        Demo controls shift this bus’s simulated GPS away from its route; the planned route itself
+        never changes.
       </p>
     </section>
   );

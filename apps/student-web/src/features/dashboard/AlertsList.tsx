@@ -7,19 +7,31 @@
  * WebSockets without changing what is shown here.
  */
 import type { Alert, AlertSeverity, AlertType } from "../../api/types";
+import { Icon, type IconName } from "../../components/Icon";
 import { EmptyState } from "../../components/StateViews";
 import { ago } from "../../lib/timeago";
-import { SimTag } from "./LiveCards";
 
-const ICON: Record<AlertType, string> = {
-  BUS_APPROACHING: "🚌",
-  BUS_DELAYED: "⏱",
-  CAPACITY_WARNING: "👥",
-  ROUTE_DEVIATION: "🛣",
-  MISSED_BUS: "⏰",
-  ALTERNATIVE_BUS_AVAILABLE: "🔄",
-  BREAKDOWN: "⚠",
-  BROADCAST: "📣",
+const ICON: Record<AlertType, IconName> = {
+  BUS_APPROACHING: "bus",
+  BUS_DELAYED: "clock",
+  CAPACITY_WARNING: "users",
+  ROUTE_DEVIATION: "route",
+  MISSED_BUS: "clock",
+  ALTERNATIVE_BUS_AVAILABLE: "bus",
+  BREAKDOWN: "alert",
+  BROADCAST: "bell",
+};
+
+/** Friendly headings for the backend alert types (the message itself comes from the backend). */
+const TITLE: Record<AlertType, string> = {
+  BUS_APPROACHING: "Your bus is approaching",
+  BUS_DELAYED: "Your bus is delayed",
+  CAPACITY_WARNING: "Your bus is filling up",
+  ROUTE_DEVIATION: "Your bus left its planned route",
+  MISSED_BUS: "You missed your bus",
+  ALTERNATIVE_BUS_AVAILABLE: "Another bus can get you there",
+  BREAKDOWN: "Your bus has a problem",
+  BROADCAST: "Transport office notice",
 };
 
 const SEVERITY_LABEL: Record<AlertSeverity, string> = {
@@ -48,10 +60,11 @@ export function AlertsList({ alerts, nowIso, onMarkRead }: Props) {
             </span>
           )}
         </h3>
-        <SimTag />
       </header>
       {alerts.length === 0 ? (
-        <EmptyState title="No notifications yet" />
+        <EmptyState title="You're all caught up">
+          New updates about your bus will appear here.
+        </EmptyState>
       ) : (
         <ul className="alerts" aria-label="Alert list">
           {alerts.map((a) => (
@@ -60,14 +73,14 @@ export function AlertsList({ alerts, nowIso, onMarkRead }: Props) {
               className={`alert alert-${a.severity}${a.read ? " is-read" : " is-unread"}${
                 a.active ? "" : " is-resolved"
               }`}
-              aria-label={`${a.title}${a.read ? "" : " (unread)"}`}
+              aria-label={`${TITLE[a.type] ?? a.title}${a.read ? "" : " (unread)"}`}
             >
               <span className="alert-icon" aria-hidden="true">
-                {ICON[a.type] ?? "•"}
+                <Icon name={ICON[a.type] ?? "bell"} size={18} />
               </span>
               <span className="row-main">
                 <strong className="alert-title">
-                  {a.title}
+                  {TITLE[a.type] ?? a.title}
                   <span className="alert-severity">{SEVERITY_LABEL[a.severity]}</span>
                   {!a.active && <span className="alert-severity">Resolved</span>}
                 </strong>
@@ -81,7 +94,7 @@ export function AlertsList({ alerts, nowIso, onMarkRead }: Props) {
                   type="button"
                   className="link-button alert-read"
                   onClick={() => onMarkRead(a.alert_id)}
-                  aria-label={`Mark ${a.title} read`}
+                  aria-label={`Mark ${TITLE[a.type] ?? a.title} read`}
                 >
                   Mark read
                 </button>
@@ -90,9 +103,6 @@ export function AlertsList({ alerts, nowIso, onMarkRead }: Props) {
           ))}
         </ul>
       )}
-      <p className="footnote">
-        In-app notifications from the backend about your college-assigned bus (simulated data).
-      </p>
     </section>
   );
 }

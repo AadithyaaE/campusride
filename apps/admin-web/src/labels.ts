@@ -25,7 +25,7 @@ export function routeTone(status: string | null | undefined): "ok" | "minor" | "
 export const OPS_LABEL: Record<string, string> = {
   active: "Active",
   delayed: "Delayed",
-  deviated: "Deviated",
+  deviated: "Off route",
   breakdown: "Breakdown",
   waiting: "Waiting",
   completed: "Completed",

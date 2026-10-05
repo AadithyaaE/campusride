@@ -44,9 +44,7 @@ export function PassengersScreen({ api, busId, tripId, onBack }: Props) {
             value={occ.occupancy_percentage === null ? "—" : `${occ.occupancy_percentage}%`}
           />
           {boarded !== null && <Field label="QR BOARDINGS THIS TRIP" value={boarded} />}
-          <Text style={s.muted}>
-            Synthetic headcount + simulated QR boardings, counted by the backend.
-          </Text>
+          <Text style={s.muted}>Demo headcount plus QR boardings, counted by CampusRide.</Text>
         </>
       )}
       <BigButton label="REFRESH" variant="secondary" onPress={load} />

@@ -129,16 +129,15 @@
 .section-head .section-title {
   margin: 0;
 }
+/* honest but quiet: synthetic demo data marker */
 .sim-tag {
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 6px;
-  color: #9a3412;
-  background: #ffedd5;
-  border: 1px solid #fed7aa;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   white-space: nowrap;
 }
 .status-chip {
@@ -521,11 +520,12 @@
   z-index: 500;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #ffedd5;
-  border: 1px solid #fed7aa;
-  color: #9a3412;
-  font-size: 0.76rem;
-  font-weight: 700;
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 12%);
 }
 .legend-bus {
   width: 16px;
@@ -1151,4 +1151,361 @@
 }
 .feed-offline::before {
   background: #f59e0b;
+}
+
+/* ================================================================ Feature 16.5 — Today's commute */
+.icon {
+  flex: none;
+  vertical-align: -3px;
+}
+.today {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-top: 4px solid var(--accent);
+  transition: border-color 0.3s ease;
+}
+.today-ok,
+.today-go {
+  border-top-color: var(--ok);
+}
+.today-warn {
+  border-top-color: #d38b00;
+}
+.today-bad {
+  border-top-color: var(--bad);
+}
+.today-muted {
+  border-top-color: var(--border);
+}
+.today-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.today-head .eyebrow {
+  margin: 0;
+}
+.today-bus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.today-bus-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: #fff;
+}
+.today-bus-title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.today-route {
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.today-stop {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+.today-stop .icon {
+  color: var(--accent);
+}
+.today-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.today-eta,
+.today-decision {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.today-eta-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.today-eta .eta-lg .eta-value {
+  font-size: 2.2rem;
+}
+.today-eta-none {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.today-trip {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.today-decision strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.today-decision-why {
+  font-size: 0.82rem;
+  color: var(--text);
+  opacity: 0.85;
+}
+.today-decision.tone-ok {
+  background: #ecfdf3;
+  border-color: #b7e4c7;
+}
+.today-decision.tone-ok strong {
+  color: #15803d;
+}
+.today-decision.tone-warn {
+  background: #fff8eb;
+  border-color: #f3d5a0;
+}
+.today-decision.tone-warn strong {
+  color: #a35b00;
+}
+.today-decision.tone-bad {
+  background: #fef2f2;
+  border-color: #f5c2c2;
+}
+.today-decision.tone-bad strong {
+  color: #b91c1c;
+}
+.today-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+}
+.today-facts dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.today-facts dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+  display: grid;
+  gap: 2px;
+}
+.today-seats {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.today-reason {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.today-alert {
+  margin: 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #fff8ea;
+  border: 1px solid #f3d5a0;
+  font-size: 0.86rem;
+}
+.today-alert .icon {
+  color: #b45309;
+  margin-top: 1px;
+}
+.today-idle {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+.phase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+.phase-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.phase-ok {
+  background: #ecfdf3;
+  color: #15803d;
+  border-color: #b7e4c7;
+}
+.phase-go {
+  background: #16a34a;
+  color: #fff;
+}
+.phase-info {
+  background: #e8f1fc;
+  color: #1d4f91;
+  border-color: #bfd4f2;
+}
+.phase-warn {
+  background: #fff4dc;
+  color: #8a5300;
+  border-color: #f1d08d;
+}
+.phase-bad {
+  background: #fdecec;
+  color: #a1161c;
+  border-color: #f3b3b3;
+}
+.phase-muted {
+  background: #eef1f4;
+  color: #5b6675;
+  border-color: #d8dde3;
+}
+@media (max-width: 380px) {
+  .today-hero,
+  .today-facts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================================================ Recent commutes */
+.recent-commutes {
+  margin-top: 16px;
+}
+.history-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.history-item {
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.history-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.history-line {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+}
+
+/* ================================================================ micro-interactions */
+.btn {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.05s ease;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:focus-visible,
+.icon-btn:focus-visible,
+.avatar:focus-visible,
+.link-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
+}
+.alert {
+  animation: alert-in 0.25s ease-out;
+}
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alert,
+  .btn,
+  .phase-badge,
+  .today {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ================================================================ UX polish (SIH demo) */
+/* One rhythm: the panel's 16px gap separates every section — no extra margins on top. */
+.recent-commutes {
+  margin-top: 0;
+}
+/* Section titles (always outside a card) read as headings, not as footnotes. */
+.section-title {
+  color: #3f4b5c;
+}
+/* Phone: the map legend stays on one line (scrolls sideways if needed) and the
+   "simulated" badge sits top-right, so the two overlays never cover each other. */
+@media (max-width: 860px) {
+  .map-sim-badge {
+    top: 10px;
+    bottom: auto;
+    right: 8px;
+  }
+  .map-legend {
+    left: 8px;
+    right: 8px;
+    bottom: 26px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    font-size: 0.72rem;
+  }
+  .map-legend::-webkit-scrollbar {
+    display: none;
+  }
+  .map-legend li {
+    white-space: nowrap;
+    flex: none;
+  }
 }

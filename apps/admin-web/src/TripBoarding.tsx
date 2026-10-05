@@ -58,7 +58,7 @@ export function TripBoarding({
                   <span>{e.student_id ?? "—"}</span>
                   <span className="muted">at {e.stop_id}</span>
                   <time dateTime={e.timestamp}>{timeFmt.format(new Date(e.timestamp))}</time>
-                  {e.scanner === "simulated" && <span className="sim-tag">simulated QR</span>}
+                  {e.scanner === "simulated" && <span className="sim-tag">demo QR</span>}
                 </li>
               ))}
             </ul>

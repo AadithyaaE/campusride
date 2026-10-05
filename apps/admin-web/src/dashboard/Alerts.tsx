@@ -167,8 +167,7 @@ export function AlertsList({ api, state }: { api: AdminApi; state: AlertsState }
         <ResolvedAlerts api={api} />
       )}
       <p className="footnote">
-        Raised and resolved by the backend on state changes — delay, capacity and major route
-        deviation. Pushed in real time; REST keeps it in sync.
+        Raised automatically when a bus is delayed, crowded or far off its planned route.
       </p>
     </section>
   );
